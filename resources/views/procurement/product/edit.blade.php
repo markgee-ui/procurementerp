@@ -8,7 +8,7 @@
         <p class="text-gray-600 mt-1">Modify the details for this specific product.</p>
     </header>
 
-    <div class="bg-white rounded-xl shadow-lg p-6 max-w-2xl mx-auto">
+    <div class="bg-white rounded-xl shadow-lg p-6 max-w-5xl mx-auto">
         
         {{-- Display Validation Errors --}}
         @if ($errors->any())

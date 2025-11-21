@@ -32,6 +32,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/store', [ProcurementController::class, 'store'])
             ->name('store');
         Route::get('/suppliers', [ProcurementController::class, 'supplierIndex'])->name('supplier.index');
+        Route::get('/suppliers/{supplier}/edit', [ProcurementController::class, 'editSupplier'])->name('supplier.edit');
+        Route::get('/suppliers/{supplier}', [ProcurementController::class, 'show'])->name('supplier.show');
+        Route::put('/suppliers/{supplier}', [ProcurementController::class, 'updateSupplier'])->name('supplier.update');
+        Route::delete('/suppliers/{supplier}', [ProcurementController::class, 'destroySupplier'])->name('supplier.destroy');
         Route::get('/products', [ProcurementController::class, 'productIndex'])->name('product.index');
         Route::get('/products/{product}/edit', [ProcurementController::class, 'edit'])->name('product.edit');
         Route::put('/products/{product}', [ProcurementController::class, 'update'])->name('product.update');

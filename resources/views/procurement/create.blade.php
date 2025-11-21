@@ -37,7 +37,8 @@
 
 @section('content')
     <header class="mb-8">
-        <p class="text-gray-600 mt-1">Input essential supplier and product details for the ERP system.</p>
+        <h1 class="text-3xl font-bold text-gray-800">Add New Entry</h1>
+      
     </header>
 
     <!-- Notification/Message Box -->
@@ -45,55 +46,159 @@
         <!-- Messages will be inserted here -->
     </div>
 
-    <form id="procurementForm" action="{{ route('procurement.store') }}" method="POST" class="space-y-6">
+    {{-- NOTE ON FILE UPLOADS: For a real photo upload, the form must use enctype="multipart/form-data" 
+        and the Controller must handle file storage. We use a text input (photo_url) here for compatibility
+        with the current form structure, but label it clearly. --}}
+    <form id="procurementForm" action="{{ route('procurement.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         @csrf 
 
-        <!-- SUPPLIER DETAILS SECTION -->
+        <!-- 1. SUPPLIER DETAILS SECTION (Expanded) -->
         <section class="bg-white p-6 sm:p-8 rounded-xl form-card">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">1. Supplier Information</h2>
+            <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">1. Supplier & Contact Information</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
+                {{-- Supplier Name --}}
                 <div class="col-span-1">
                     <label for="supplierName" class="block text-sm font-medium text-gray-700 mb-1">Supplier Name <span class="text-red-500">*</span></label>
                     <input type="text" id="supplierName" name="supplier_name" required
                            value="{{ old('supplier_name') }}"
                            class="input-field w-full p-3 border rounded-lg text-gray-900 @error('supplier_name') border-red-500 @enderror"
-                           placeholder="e.g., Simba">
+                           >
                     @error('supplier_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror 
                 </div>
 
+                {{-- KRA Pin (New Field) --}}
+                <div class="col-span-1">
+                    <label for="kraPin" class="block text-sm font-medium text-gray-700 mb-1">KRA PIN (TIN)</label>
+                    <input type="text" id="kraPin" name="kra_pin"
+                           value="{{ old('kra_pin') }}"
+                           class="input-field w-full p-3 border rounded-lg text-gray-900 @error('kra_pin') border-red-500 @enderror"
+                          >
+                    @error('kra_pin') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                {{-- Location --}}
                 <div class="col-span-1">
                     <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Location (City/Country) <span class="text-red-500">*</span></label>
                     <input type="text" id="location" name="location" required
                            value="{{ old('location') }}"
                            class="input-field w-full p-3 border rounded-lg text-gray-900 @error('location') border-red-500 @enderror"
-                           placeholder="e.g., Nairobi, Kenya">
+                           >
                     @error('location') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror 
                 </div>
 
-                <div class="col-span-full">
-                    <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-500">*</span></label>
-                    <input type="text" id="address" name="address" required
-                           value="{{ old('address') }}"
-                           class="input-field w-full p-3 border rounded-lg text-gray-900 @error('address') border-red-500 @enderror"
-                           placeholder="e.g., P.O. Box 456">
-                    @error('address') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                </div>
-
-                <div class="col-span-full">
-                    <label for="contact" class="block text-sm font-medium text-gray-700 mb-1">Phone or Email <span class="text-red-500">*</span></label>
+                {{-- Contact (Email/Phone) --}}
+                <div class="col-span-1">
+                    <label for="contact" class="block text-sm font-medium text-gray-700 mb-1">Supplier Contact (Phone or Email) <span class="text-red-500">*</span></label>
                     <input type="text" id="contact" name="contact" required
                            value="{{ old('contact') }}"
                            class="input-field w-full p-3 border rounded-lg text-gray-900 @error('contact') border-red-500 @enderror"
-                           placeholder="e.g., +254712345678 ">
+                           >
                     @error('contact') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                {{-- Sales Person Contact (New Field) --}}
+                <div class="col-span-1">
+                    <label for="salesPersonContact" class="block text-sm font-medium text-gray-700 mb-1">Sales Person Name/Contact</label>
+                    <input type="text" id="salesPersonContact" name="sales_person_contact"
+                           value="{{ old('sales_person_contact') }}"
+                           class="input-field w-full p-3 border rounded-lg text-gray-900 @error('sales_person_contact') border-red-500 @enderror"
+                           >
+                    @error('sales_person_contact') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                {{-- Shop Photo UPLOAD (Changed from URL) --}}
+<div class="col-span-1">
+    <label for="shop_photo" class="block text-sm font-medium text-gray-700 mb-1">
+        Upload Shop/Hardware Photo <span class="text-red-500">*</span>
+    </label>
+    
+    <input 
+        type="file" 
+        id="shop_photo" 
+        name="shop_photo" {{-- IMPORTANT: Changed name to 'shop_photo' to reflect file upload convention --}}
+        required 
+        accept="image/*" {{-- Restrict file selection to images --}}
+        class="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 
+               focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 
+               file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 
+               hover:file:bg-indigo-100 @error('shop_photo') border-red-500 @enderror"
+    >
+    
+    @error('shop_photo') 
+        <p class="text-red-500 text-xs mt-1">{{ $message }}</p> 
+    @enderror
+    
+    <p class="text-xs text-gray-500 mt-1">
+        Upload the image file directly (Max 2MB).
+        @if (isset($supplier->shop_photo_path))
+            <span class="text-green-600">Current file exists. Uploading a new file will replace it.</span>
+        @endif
+    </p>
+</div>
+
+                {{-- Address --}}
+                <div class="col-span-full">
+                    <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Physical Address <span class="text-red-500">*</span></label>
+                    <input type="text" id="address" name="address" required
+                           value="{{ old('address') }}"
+                           class="input-field w-full p-3 border rounded-lg text-gray-900 @error('address') border-red-500 @enderror"
+                           >
+                    @error('address') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
             </div>
         </section>
 
-        <!-- PRODUCT DETAILS SECTION (DYNAMIC) -->
+        <!-- 2. PAYMENT DETAILS SECTION (New Section) -->
         <section class="bg-white p-6 sm:p-8 rounded-xl form-card">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">2. Product Details</h2>
+            <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">2. Payment & Bank Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {{-- Bank Account Number --}}
+                <div class="col-span-1">
+                    <label for="accountNumber" class="block text-sm font-medium text-gray-700 mb-1">Bank Account Number</label>
+                    <input type="text" id="accountNumber" name="account_number"
+                           value="{{ old('account_number') }}"
+                           class="input-field w-full p-3 border rounded-lg text-gray-900 @error('account_number') border-red-500 @enderror"
+                           >
+                    @error('account_number') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                
+                {{-- Bank Name --}}
+                <div class="col-span-1">
+                    <label for="bankName" class="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                    <input type="text" id="bankName" name="bank_name"
+                           value="{{ old('bank_name') }}"
+                           class="input-field w-full p-3 border rounded-lg text-gray-900 @error('bank_name') border-red-500 @enderror"
+                           >
+                    @error('bank_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                
+                {{-- M-Pesa Paybill Number --}}
+                <div class="col-span-1">
+                    <label for="paybillNumber" class="block text-sm font-medium text-gray-700 mb-1">M-Pesa Paybill Number</label>
+                    <input type="text" id="paybillNumber" name="paybill_number"
+                           value="{{ old('paybill_number') }}"
+                           class="input-field w-full p-3 border rounded-lg text-gray-900 @error('paybill_number') border-red-500 @enderror"
+                           >
+                    @error('paybill_number') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                
+                {{-- M-Pesa Till Number --}}
+                <div class="col-span-1">
+                    <label for="tillNumber" class="block text-sm font-medium text-gray-700 mb-1">M-Pesa Till Number</label>
+                    <input type="text" id="tillNumber" name="till_number"
+                           value="{{ old('till_number') }}"
+                           class="input-field w-full p-3 border rounded-lg text-gray-900 @error('till_number') border-red-500 @enderror"
+                           >
+                    @error('till_number') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                
+            </div>
+        </section>
+
+        <!-- 3. PRODUCT DETAILS SECTION (DYNAMIC) -->
+        <section class="bg-white p-6 sm:p-8 rounded-xl form-card">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">3. Product Details</h2>
             <input type="hidden" name="products_data" id="productsDataInput">
             <div id="productsContainer" class="space-y-4 mb-6">
                 <!-- Initial product row -->
@@ -233,9 +338,11 @@
             const item = itemInput.value.trim();
             const unitPrice = parseFloat(priceInput.value);
 
+            // Reset error borders
             itemInput.classList.remove('border-red-500');
             priceInput.classList.remove('border-red-500');
 
+            // Validate product fields
             if (!item) {
                 itemInput.classList.add('border-red-500');
                 hasError = true;
@@ -245,6 +352,7 @@
                 hasError = true;
             }
 
+            // Collect product data
             products.push({
                 item: item,
                 description: descInput.value.trim(),
@@ -252,15 +360,32 @@
             });
         });
 
+        // Basic check for required supplier fields (if empty, prevent submission)
+        const requiredSupplierFields = [
+            'supplierName', 'location', 'address', 'contact'
+        ];
+        
+        requiredSupplierFields.forEach(id => {
+            const input = document.getElementById(id);
+            if (input && !input.value.trim()) {
+                input.classList.add('border-red-500');
+                hasError = true;
+            } else if (input) {
+                input.classList.remove('border-red-500');
+            }
+        });
+
+
         if (hasError) {
-            showMessage("Error: Please fill out all required fields and ensure Unit Price is a positive number for all products.", 'error');
+            showMessage("Error: Please fill out all required fields marked with * and ensure product prices are positive numbers.", 'error');
             return;
         }
         if (products.length === 0) {
-             showMessage("Error: At least one product is required for submission.", 'error');
-             return;
+            showMessage("Error: At least one product is required for submission.", 'error');
+            return;
         }
 
+        // Serialize products data and submit
         productsDataInput.value = JSON.stringify(products);
         this.submit();
     });
@@ -271,6 +396,13 @@
         if (initialRow) {
             initialRow.querySelector('button').classList.add('hidden');
         }
+        // If the server returned validation errors, show the message box
+        @if ($errors->any() || session('error'))
+            showMessage("Please correct the errors indicated below.", 'error');
+        @endif
+        @if (session('success'))
+            showMessage("{{ session('success') }}", 'success');
+        @endif
     });
 </script>
 @endpush
