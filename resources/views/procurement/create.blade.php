@@ -109,14 +109,13 @@
                 {{-- Shop Photo UPLOAD (Changed from URL) --}}
 <div class="col-span-1">
     <label for="shop_photo" class="block text-sm font-medium text-gray-700 mb-1">
-        Upload Shop/Hardware Photo <span class="text-red-500">*</span>
+        Upload Shop/Hardware Photo <span class="text-red-500"></span>
     </label>
     
     <input 
         type="file" 
         id="shop_photo" 
         name="shop_photo" {{-- IMPORTANT: Changed name to 'shop_photo' to reflect file upload convention --}}
-        required 
         accept="image/*" {{-- Restrict file selection to images --}}
         class="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 
                focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 
