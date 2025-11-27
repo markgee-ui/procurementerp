@@ -7,6 +7,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use App\Models\Supplier;
 use App\Models\Product;
+use App\Models\PurchaseOrder; 
+use App\Models\PurchaseOrderItem; 
 
 class ProcurementController extends Controller
 {
@@ -259,5 +261,96 @@ class ProcurementController extends Controller
             ->withInput()
             ->with('error', 'An error occurred while saving the supplier data. Please try again.');
     }
+}
+
+public function createPurchaseOrder(Supplier $supplier) // Uses Route Model Binding
+    {
+        // Fetch all products associated with this supplier
+        // Assuming products are linked by 'supplier_id'
+        $products = $supplier->products; // Or whatever your relationship method is called
+
+        return view('procurement.purchase_order.create', compact('supplier', 'products'));
+    }
+
+  public function storePurchaseOrder(Request $request) 
+    {
+        // --- 1. Validation ---
+        // (Validation block is correct and remains unchanged)
+        $request->validate([
+            'supplier_id' => 'required|exists:suppliers,id',
+            'items'       => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity'   => 'required|integer|min:1',
+            'items.*.discount'   => 'nullable|numeric|min:0|max:100', 
+            'items.*.unit_price' => 'required|numeric|min:0', 
+        ]);
+
+        try {
+            // --- 2. Calculate and Prepare Data ---
+            $grandTotal = 0;
+            $orderItems = [];
+
+            foreach ($request->items as $itemData) {
+                $quantity = $itemData['quantity'];
+                // SECURITY NOTE: In a real system, you should re-fetch the price 
+                // from the Product model here: $price = Product::find($itemData['product_id'])->unit_price;
+                $price = $itemData['unit_price']; 
+                $discountPercent = $itemData['discount'] ?? 0;
+
+                $subtotal = $price * $quantity;
+                $discountAmount = $subtotal * ($discountPercent / 100);
+                $lineTotal = $subtotal - $discountAmount;
+                
+                $grandTotal += $lineTotal;
+
+                $orderItems[] = [
+                    'product_id' => $itemData['product_id'],
+                    'quantity'   => $quantity,
+                    'unit_price' => $price,
+                    'discount'   => $discountPercent,
+                    'line_total' => $lineTotal,
+                ];
+            }
+
+            // --- 3. Save Purchase Order Header ---
+            $purchaseOrder = PurchaseOrder::create([
+                'supplier_id' => $request->supplier_id,
+                'total_amount' => $grandTotal,
+                'order_date' => now(),
+                'status' => 'Draft', // Set initial status
+                // 'order_number' => $this->generatePoNumber(), // Optional: if you have a number generator
+            ]);
+
+            // --- 4. Save Line Items (Batch creation is highly recommended) ---
+            // Mass creating the items through the relationship is efficient.
+            $purchaseOrder->items()->createMany($orderItems);
+            
+            // --- 5. Return Success ---
+            return redirect()->route('procurement.order.show',$purchaseOrder)
+                             ->with('success', 'Purchase Order #' . ($purchaseOrder->order_number ?? $purchaseOrder->id) . ' created successfully! Total: ' . number_format($grandTotal, 2));
+
+        } catch (\Exception $e) {
+            Log::error("PURCHASE ORDER SAVE ERROR: " . $e->getMessage());
+
+            return back()
+                ->withInput()
+                ->with('error', 'An error occurred while creating the Purchase Order: ' . $e->getMessage());
+        }
+    }
+    // ProcurementController.php
+public function showPurchaseOrder(PurchaseOrder $purchaseOrder)
+{
+    // Eager load relationships needed for the view
+    $purchaseOrder->load('supplier', 'items.product');
+
+    return view('procurement.purchase_order.show', compact('purchaseOrder'));
+}
+public function printPurchaseOrder(PurchaseOrder $purchaseOrder)
+{
+    // Eager load relationships for the print view
+    $purchaseOrder->load('supplier', 'items.product');
+
+    // Use a different layout/view without navigation/sidebar for clean printing
+    return view('procurement.purchase_order.print', compact('purchaseOrder'));
 }
 }

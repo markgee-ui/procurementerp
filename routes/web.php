@@ -40,6 +40,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/products/{product}/edit', [ProcurementController::class, 'edit'])->name('product.edit');
         Route::put('/products/{product}', [ProcurementController::class, 'update'])->name('product.update');
         Route::delete('/products/{product}', [ProcurementController::class, 'destroy'])->name('product.destroy');
+        Route::get('/order/create/{supplier}', [ProcurementController::class, 'createPurchaseOrder'])->name('order.create');
+        Route::post('/order/store', [ProcurementController::class, 'storePurchaseOrder'])->name('order.store');
+       Route::get('/order/show/{purchaseOrder}', [ProcurementController::class, 'showPurchaseOrder'])->name('order.show');
+       Route::get('/order/print/{purchaseOrder}', [ProcurementController::class, 'printPurchaseOrder'])->name('order.print');
     });
 });
 
