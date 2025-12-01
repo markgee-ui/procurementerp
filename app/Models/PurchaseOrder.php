@@ -14,6 +14,7 @@ class PurchaseOrder extends Model
 
     protected $fillable = [
         'supplier_id',
+        'project_name',
         'order_number', // A unique number, often generated
         'order_date',
         'required_by_date',

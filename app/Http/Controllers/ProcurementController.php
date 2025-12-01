@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use App\Models\Product;
 use App\Models\PurchaseOrder; 
 use App\Models\PurchaseOrderItem; 
+use Illuminate\Support\Facades\DB;
 
 class ProcurementController extends Controller
 {
@@ -143,6 +144,7 @@ class ProcurementController extends Controller
             'item'          => 'required|string|max:255',
             'description'   => 'nullable|string|max:500',
             'unit_price'    => 'required|numeric|min:0',
+            'unit'          => 'required|string|max:50',
             'supplier_id'   => 'required|exists:suppliers,id', // Ensure the supplier exists
 
         ]);
@@ -154,6 +156,7 @@ class ProcurementController extends Controller
                 'description'   => $request->description,
                 'unit_price'    => $request->unit_price,
                 'supplier_id'   => $request->supplier_id,
+                'unit'          => $request->unit,
             ]);
 
             // 3. RETURN SUCCESS
@@ -245,6 +248,7 @@ class ProcurementController extends Controller
                 'item'        => $product['item'],
                 'description' => $product['description'],
                 'unit_price'  => $product['unit_price'],
+                'unit'        => $product['unit'],
             ]);
         }
 
@@ -267,9 +271,41 @@ public function createPurchaseOrder(Supplier $supplier) // Uses Route Model Bind
     {
         // Fetch all products associated with this supplier
         // Assuming products are linked by 'supplier_id'
-        $products = $supplier->products; // Or whatever your relationship method is called
+        $products = $supplier->products; 
 
         return view('procurement.purchase_order.create', compact('supplier', 'products'));
+    }
+    private function generatePoNumber(): string
+    {
+        $currentYear = now()->year;
+
+        // Find the last PO created this year to determine the next sequence number.
+        // We look up the latest record to get its ID. 
+        // NOTE: This relies on the database ID being sequential.
+        $latestPo = PurchaseOrder::latest('id')->first();
+        
+        // Start the sequence at 1 if no previous PO exists.
+        $nextSequence = 1;
+
+        if ($latestPo) {
+            // If an order exists, take its ID, and increment for the new sequence number.
+            // Using ID directly is simple, but for true year-specific sequence, 
+            // you might need a dedicated sequence number column.
+            
+            // For simplicity and to ensure uniqueness, we'll use the next AUTO-INCREMENT ID.
+            // To get the next ID without saving, we can query the information schema 
+            // OR simply rely on the ID after the model is created (less ideal here).
+            
+            // **Safer approach: Base sequence on the current count of POs + 1, 
+            // but this is simpler if you reset the number yearly.**
+            $nextSequence = $latestPo->id + 1; 
+        }
+
+        // Format the sequence number with leading zeros (e.g., 1 becomes 0001)
+        $paddedSequence = str_pad($nextSequence, 4, '0', STR_PAD_LEFT);
+
+        // Combine prefix, year, and sequence
+        return "TGL/{$paddedSequence}";
     }
 
   public function storePurchaseOrder(Request $request) 
@@ -278,6 +314,7 @@ public function createPurchaseOrder(Supplier $supplier) // Uses Route Model Bind
         // (Validation block is correct and remains unchanged)
         $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
+            'project_name' => 'nullable|string|max:255',
             'items'       => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity'   => 'required|integer|min:1',
@@ -311,14 +348,16 @@ public function createPurchaseOrder(Supplier $supplier) // Uses Route Model Bind
                     'line_total' => $lineTotal,
                 ];
             }
-
+            $poNumber = $this->generatePoNumber();
             // --- 3. Save Purchase Order Header ---
             $purchaseOrder = PurchaseOrder::create([
                 'supplier_id' => $request->supplier_id,
+                'project_name'  => $request->project_name,
                 'total_amount' => $grandTotal,
                 'order_date' => now(),
-                'status' => 'Draft', // Set initial status
-                // 'order_number' => $this->generatePoNumber(), // Optional: if you have a number generator
+                'status' => 'Draft', 
+                'order_number' => $poNumber,// Set initial status
+
             ]);
 
             // --- 4. Save Line Items (Batch creation is highly recommended) ---
@@ -353,4 +392,221 @@ public function printPurchaseOrder(PurchaseOrder $purchaseOrder)
     // Use a different layout/view without navigation/sidebar for clean printing
     return view('procurement.purchase_order.print', compact('purchaseOrder'));
 }
+
+public function indexPurchaseOrder(Request $request)
+    {
+        // Start building the query
+        $query = PurchaseOrder::query();
+
+        // --- Filtering Logic ---
+
+        // 1. Search by PO # or Project Name
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                // Search by auto-generated ID (if order_number is null) or project_name
+                $q->where('order_number', 'like', "%{$search}%")
+                  ->orWhere('project_name', 'like', "%{$search}%");
+            });
+        }
+
+        // 2. Filter by Status
+        if ($status = $request->input('status_filter')) {
+            $query->where('status', $status);
+        }
+
+        // 3. Filter by Project Name (exact match from dropdown)
+        if ($project = $request->input('project_filter')) {
+            $query->where('project_name', $project);
+        }
+
+        // --- Fetch Data ---
+
+        // Get all unique project names for the filter dropdown
+        $projects = PurchaseOrder::select('project_name')
+                        ->distinct()
+                        ->whereNotNull('project_name')
+                        ->orderBy('project_name')
+                        ->pluck('project_name');
+
+        // Execute the query, eager-load the supplier, and paginate
+        $purchaseOrders = $query->with('supplier')
+                                ->orderBy('order_date', 'desc')
+                                ->paginate(10)
+                                ->withQueryString(); // Maintain filters on pagination links
+
+        // --- Return View ---
+        return view('procurement.purchase_order.index', [
+            'purchaseOrders' => $purchaseOrders,
+            'projects' => $projects,
+        ]);
+    }
+    public function createSelectSupplier(Request $request)
+    {
+        // Start building the query
+        $query = Supplier::query();
+
+        // --- Filtering Logic (Reusing logic from Supplier Index) ---
+
+        // Supplier Name Search
+        if ($search = $request->input('name_search')) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        // Location Filter
+        if ($location = $request->input('location_filter')) {
+            $query->where('location', $location);
+        }
+
+        // --- Fetch Data ---
+
+        // Get all unique locations for the filter dropdown
+        $locations = Supplier::select('location')
+                            ->distinct()
+                            ->whereNotNull('location')
+                            ->orderBy('location')
+                            ->pluck('location');
+
+        // Execute the query and paginate results
+        $suppliers = $query->orderBy('name', 'asc')
+                            ->paginate(10)
+                            ->withQueryString();
+
+        // --- Return View ---
+        // We will reuse the supplier index view but pass a variable 
+        // to indicate we are in 'selection' mode.
+        return view('procurement.supplier.index', [
+            'suppliers' => $suppliers,
+            'locations' => $locations,
+            'selectionMode' => true, // Flag to modify the view's behavior/buttons
+        ]);
+    }
+    public function editPurchaseOrder(PurchaseOrder $purchaseOrder)
+    {
+        // 1. Fetch all products (or only those linked to the supplier, if required by your logic)
+        $products = Product::where('supplier_id', $purchaseOrder->supplier_id)->get();
+        
+        // 2. Eager load items and supplier for the PO
+        $purchaseOrder->load(['items', 'supplier']);
+
+        // 3. Return the view
+        return view('procurement.purchase_order.edit', [
+            'purchaseOrder' => $purchaseOrder,
+            'products' => $products,
+        ]);
+    }
+    public function updatePurchaseOrder(Request $request, PurchaseOrder $purchaseOrder)
+    {
+        // 1. Validation
+        // This validation is similar to the store method but ensures the PO being updated is not a final status.
+        // NOTE: Add a check if the status is not 'Issued' or 'Received' etc. to prevent editing finalized orders.
+        if (!in_array($purchaseOrder->status, ['Draft'])) {
+             return back()->with('error', 'Only Purchase Orders with a "Draft" status can be modified.');
+        }
+
+        $request->validate([
+            'supplier_id' => 'required|exists:suppliers,id', // Should match the existing PO supplier
+            'project_name' => 'nullable|string|max:255',
+            'items'       => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity'   => 'required|integer|min:1',
+            'items.*.discount'   => 'nullable|numeric|min:0|max:100',
+            // IMPORTANT: We trust the unit_price passed from the form for calculation, 
+            // but in a production system, it should be re-validated against the product master.
+            'items.*.unit_price' => 'required|numeric|min:0', 
+        ]);
+
+        try {
+            DB::beginTransaction();
+            
+            // 2. Calculate and Prepare Data
+            $grandTotal = 0;
+            $orderItems = [];
+
+            foreach ($request->items as $itemData) {
+                $quantity = (float)$itemData['quantity'];
+                $price = (float)$itemData['unit_price']; 
+                $discountPercent = (float)($itemData['discount'] ?? 0);
+
+                $subtotal = $price * $quantity;
+                $discountAmount = $subtotal * ($discountPercent / 100);
+                $lineTotal = round($subtotal - $discountAmount, 2); // Round to 2 decimal places
+                
+                $grandTotal += $lineTotal;
+
+                $orderItems[] = [
+                    'product_id' => $itemData['product_id'],
+                    'quantity'   => $quantity,
+                    'unit_price' => $price,
+                    'discount'   => $discountPercent,
+                    'line_total' => $lineTotal,
+                    // Optionally add timestamps if not using createMany
+                    // 'created_at' => now(), 
+                    // 'updated_at' => now(),
+                ];
+            }
+            
+            // 3. Update Purchase Order Header
+            $purchaseOrder->update([
+                'project_name' => $request->project_name,
+                'total_amount' => round($grandTotal, 2),
+                'status' => 'Draft', // Ensure status remains Draft on modification
+                'updated_at' => now(),
+            ]);
+
+            // 4. Synchronize/Replace Line Items
+            // We delete all old items and re-create the new ones in one go.
+            $purchaseOrder->items()->delete();
+            $purchaseOrder->items()->createMany($orderItems);
+            
+            DB::commit();
+
+            // 5. Return Success
+            $poNumber = $purchaseOrder->order_number ?? $purchaseOrder->id;
+            return redirect()->route('procurement.order.show', $purchaseOrder)
+                             ->with('success', "Purchase Order #{$poNumber} updated successfully! New Total: " . number_format($grandTotal, 2));
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("PURCHASE ORDER UPDATE ERROR for PO #{$purchaseOrder->id}: " . $e->getMessage());
+
+            return back()
+                ->withInput()
+                ->with('error', 'An error occurred while updating the Purchase Order. Please try again: ' . $e->getMessage());
+        }
+    }
+    public function destroyPurchaseOrder(PurchaseOrder $purchaseOrder)
+    {
+        // 1. Status Check
+        if (!in_array($purchaseOrder->status, ['Draft'])) {
+            $poNumber = $purchaseOrder->order_number ?? $purchaseOrder->id;
+            return back()->with('error', "Purchase Order #{$poNumber} has a status of '{$purchaseOrder->status}' and cannot be deleted. It must be a 'Draft' to be destroyed.");
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Get the PO number/ID for the success message
+            $poIdentifier = $purchaseOrder->order_number ?? $purchaseOrder->id;
+            
+            // 2. Delete Line Items
+            // This assumes the relationship is named 'items' and cascades might not be set in the database
+            $purchaseOrder->items()->delete();
+            
+            // 3. Delete the Purchase Order Header
+            $purchaseOrder->delete();
+            
+            DB::commit();
+
+            // 4. Return Success
+            return redirect()->route('procurement.order.index')
+                             ->with('success', "Purchase Order #{$poIdentifier} and its associated items have been successfully deleted.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("PURCHASE ORDER DELETION ERROR for PO #{$purchaseOrder->id}: " . $e->getMessage());
+
+            return back()
+                ->with('error', 'An error occurred while deleting the Purchase Order. Please check logs.');
+        }
+    }
 }

@@ -41,9 +41,14 @@ Route::middleware('auth')->group(function () {
         Route::put('/products/{product}', [ProcurementController::class, 'update'])->name('product.update');
         Route::delete('/products/{product}', [ProcurementController::class, 'destroy'])->name('product.destroy');
         Route::get('/order/create/{supplier}', [ProcurementController::class, 'createPurchaseOrder'])->name('order.create');
+        Route::get('/orders/create', [ProcurementController::class, 'createSelectSupplier'])->name('order.create_select_supplier');
         Route::post('/order/store', [ProcurementController::class, 'storePurchaseOrder'])->name('order.store');
        Route::get('/order/show/{purchaseOrder}', [ProcurementController::class, 'showPurchaseOrder'])->name('order.show');
        Route::get('/order/print/{purchaseOrder}', [ProcurementController::class, 'printPurchaseOrder'])->name('order.print');
+       Route::get('/orders', [ProcurementController::class, 'indexPurchaseOrder'])->name('order.index');
+       Route::get('/orders/{purchaseOrder}/edit', [ProcurementController::class, 'editPurchaseOrder'])->name('order.edit');
+        Route::put('/orders/{purchaseOrder}', [ProcurementController::class, 'updatePurchaseOrder'])->name('order.update');
+        Route::delete('/orders/{purchaseOrder}', [ProcurementController::class, 'destroyPurchaseOrder'])->name('order.destroy');
     });
 });
 

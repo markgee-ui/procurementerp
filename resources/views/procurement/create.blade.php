@@ -209,10 +209,17 @@
                                    class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Product Name">
                         </div>
                         <div class="col-span-6 sm:col-span-3">
-                            <label for="description-0" class="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                            <label for="description-0" class="block text-xs font-medium text-gray-600 mb-1">Item Code</label>
                             <input type="text" id="description-0" name="description"
                                    class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Specifications/Model">
+
                         </div>
+                        <div class="col-span-6 sm:col-span-1">
+                    <label for="unit-0" class="block text-xs font-medium text-gray-600 mb-1">Unit</label>
+                    <input type="text" id="unit-0" name="unit"
+                           class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="pcs/kg/l">
+                </div>
+
                         <div class="col-span-4 sm:col-span-1">
                             <label for="unitPrice-0" class="block text-xs font-medium text-gray-600 mb-1">Unit Price <span class="text-red-500">*</span></label>
                             <input type="number" id="unitPrice-0" name="unitPrice" required step="0.01" min="0.01"
@@ -291,6 +298,11 @@
                         <input type="number" id="unitPrice-${productRowCounter}" name="unitPrice" required step="0.01" min="0.01"
                                class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="0.00">
                     </div>
+                    <div class="col-span-4 sm:col-span-1">
+                        <label for="unit-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Unit Price <span class="text-red-500">*</span></label>
+                        <input type="text" id="unit-${productRowCounter}" name="unit" 
+                               class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="kg">
+                    </div>
                     <div class="col-span-2 sm:col-span-6 sm:text-right flex items-center justify-end sm:justify-end">
                         <button type="button" onclick="removeProductRow(this)"
                                 class="text-red-500 hover:text-red-700 text-sm font-medium p-1 rounded-md transition-colors">
@@ -331,33 +343,37 @@
         let hasError = false;
 
         productRows.forEach((row, index) => {
-            const itemInput = row.querySelector('[name="item"]');
-            const priceInput = row.querySelector('[name="unitPrice"]');
-            const descInput = row.querySelector('[name="description"]');
-            const item = itemInput.value.trim();
-            const unitPrice = parseFloat(priceInput.value);
+    const itemInput = row.querySelector('[name="item"]');
+    const priceInput = row.querySelector('[name="unitPrice"]');
+    const descInput = row.querySelector('[name="description"]');
+    const unitInput = row.querySelector('[name="unit"]'); 
 
-            // Reset error borders
-            itemInput.classList.remove('border-red-500');
-            priceInput.classList.remove('border-red-500');
+    const item = itemInput.value.trim();
+    const unitPrice = parseFloat(priceInput.value);
 
-            // Validate product fields
-            if (!item) {
-                itemInput.classList.add('border-red-500');
-                hasError = true;
-            }
-            if (isNaN(unitPrice) || unitPrice <= 0) {
-                priceInput.classList.add('border-red-500');
-                hasError = true;
-            }
+    // Reset error borders
+    itemInput.classList.remove('border-red-500');
+    priceInput.classList.remove('border-red-500');
 
-            // Collect product data
-            products.push({
-                item: item,
-                description: descInput.value.trim(),
-                unit_price: unitPrice.toFixed(2)
-            });
-        });
+    // Validate product fields
+    if (!item) {
+        itemInput.classList.add('border-red-500');
+        hasError = true;
+    }
+    if (isNaN(unitPrice) || unitPrice <= 0) {
+        priceInput.classList.add('border-red-500');
+        hasError = true;
+    }
+
+    // Collect product data
+    products.push({
+        item: item,
+        description: descInput.value.trim(),
+        unit: unitInput ? unitInput.value.trim() : null, // <-- Include unit safely
+        unit_price: unitPrice.toFixed(2)
+    });
+});
+
 
         // Basic check for required supplier fields (if empty, prevent submission)
         const requiredSupplierFields = [

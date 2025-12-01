@@ -26,7 +26,7 @@
             Products
         </a>
     </li>
-    <li>
+    <!-- <li>
         {{-- Use request()->is() to check the current route and apply 'active' --}}
         <a href="{{ route('procurement.create') }}" 
            class="sidebar-link flex items-center p-3 rounded-lg hover:bg-gray-700 {{ request()->is('procurement/create') ? 'active' : '' }}">
@@ -35,6 +35,18 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             Add New Entry
+        </a>
+    </li> -->
+    <li>
+        {{-- Check if the current route name starts with 'procurement.order.' for active state --}}
+        <a href="{{ route('procurement.order.index') }}" 
+           class="sidebar-link flex items-center p-3 rounded-lg hover:bg-gray-700 
+           {{ request()->routeIs('procurement.order.*') ? 'bg-gray-700 text-white' : '' }}">
+            {{-- Purchase Orders Icon (Shopping Cart) --}}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.023.832l.98 6.495m.879 1.125a2.121 2.121 0 0 1 0 3.375l-.948 1.422c-.637.957-.29 2.167.625 2.502a4.4 4.4 0 0 0 1.625.295h12.553a1.5 1.5 0 0 0 1.43-1.059l2.7-7.221a.75.75 0 0 0-.083-.795L21.75 8.25m-18 4.717V17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm16.5 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
+            </svg>
+            Purchase Orders
         </a>
     </li>
     <li>
