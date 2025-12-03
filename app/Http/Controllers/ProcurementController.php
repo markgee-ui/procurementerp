@@ -10,6 +10,8 @@ use App\Models\Product;
 use App\Models\PurchaseOrder; 
 use App\Models\PurchaseOrderItem; 
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 class ProcurementController extends Controller
 {
@@ -58,7 +60,7 @@ class ProcurementController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @param  \App\Models\Supplier  $supplier
      * @return \Illuminate\Http\RedirectResponse
-     */
+     */                                        
     public function updateSupplier(Request $request, Supplier $supplier): RedirectResponse
     {
         // Placeholder validation - update with all your fields
@@ -67,8 +69,6 @@ class ProcurementController extends Controller
             'location' => 'required|string|max:255',
             // Add validation for KRA Pin, contacts, and payment details
         ]);
-
-        $supplier->update($request->all());
 
         return redirect()->route('procurement.supplier.index')
                          ->with('success', 'Supplier details updated successfully!');
@@ -81,20 +81,20 @@ class ProcurementController extends Controller
      * @return \Illuminate\Http\RedirectResponse
      */
     public function destroySupplier(Supplier $supplier): RedirectResponse
-    {
+    {                                                                                    
         $supplier->delete();
 
         return redirect()->route('procurement.supplier.index')
                          ->with('success', 'Supplier successfully removed.');
-    }
+    }     
     public function show(Supplier $supplier)
     {
         // The $supplier variable already contains the correct Supplier model 
-        // instance thanks to implicit model binding.
+        // instance thanks to implicit model binding.     
 
-        return view('procurement.supplier.show', compact('supplier'));
+        return view('procurement.supplier.show', compact('supplier'));                                            
     }
-    /**
+    /**    
      * Display a listing of all Products (New View)
      */
      public function productIndex(Request $request) 
@@ -309,73 +309,82 @@ public function createPurchaseOrder(Supplier $supplier) // Uses Route Model Bind
     }
 
   public function storePurchaseOrder(Request $request) 
-    {
-        // --- 1. Validation ---
-        // (Validation block is correct and remains unchanged)
-        $request->validate([
-            'supplier_id' => 'required|exists:suppliers,id',
-            'project_name' => 'nullable|string|max:255',
-            'items'       => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity'   => 'required|integer|min:1',
-            'items.*.discount'   => 'nullable|numeric|min:0|max:100', 
-            'items.*.unit_price' => 'required|numeric|min:0', 
-        ]);
+{
+    // 1. Validation
+    $request->validate([
+        'supplier_id' => 'required|exists:suppliers,id',
+        'project_name' => 'nullable|string|max:255',
+        'items'       => 'required|array|min:1',
+        'items.*.product_id' => 'required|exists:products,id',
+        'items.*.quantity'   => 'required|integer|min:0',  
+        'items.*.discount'   => 'nullable|numeric|min:0|max:100',
+        'items.*.unit_price' => 'required|numeric|min:0',
+    ]);
 
-        try {
-            // --- 2. Calculate and Prepare Data ---
-            $grandTotal = 0;
-            $orderItems = [];
+    try {
+        $grandTotal = 0;
+        $orderItems = [];
 
-            foreach ($request->items as $itemData) {
-                $quantity = $itemData['quantity'];
-                // SECURITY NOTE: In a real system, you should re-fetch the price 
-                // from the Product model here: $price = Product::find($itemData['product_id'])->unit_price;
-                $price = $itemData['unit_price']; 
-                $discountPercent = $itemData['discount'] ?? 0;
+        foreach ($request->items as $itemData) {
 
-                $subtotal = $price * $quantity;
-                $discountAmount = $subtotal * ($discountPercent / 100);
-                $lineTotal = $subtotal - $discountAmount;
-                
-                $grandTotal += $lineTotal;
-
-                $orderItems[] = [
-                    'product_id' => $itemData['product_id'],
-                    'quantity'   => $quantity,
-                    'unit_price' => $price,
-                    'discount'   => $discountPercent,
-                    'line_total' => $lineTotal,
-                ];
+            if ($itemData['quantity'] <= 0) {
+                continue;
             }
-            $poNumber = $this->generatePoNumber();
-            // --- 3. Save Purchase Order Header ---
-            $purchaseOrder = PurchaseOrder::create([
-                'supplier_id' => $request->supplier_id,
-                'project_name'  => $request->project_name,
-                'total_amount' => $grandTotal,
-                'order_date' => now(),
-                'status' => 'Draft', 
-                'order_number' => $poNumber,// Set initial status
 
-            ]);
+            $quantity = $itemData['quantity'];
+            $price = $itemData['unit_price'];
+            $discountPercent = $itemData['discount'] ?? 0;
 
-            // --- 4. Save Line Items (Batch creation is highly recommended) ---
-            // Mass creating the items through the relationship is efficient.
-            $purchaseOrder->items()->createMany($orderItems);
-            
-            // --- 5. Return Success ---
-            return redirect()->route('procurement.order.show',$purchaseOrder)
-                             ->with('success', 'Purchase Order #' . ($purchaseOrder->order_number ?? $purchaseOrder->id) . ' created successfully! Total: ' . number_format($grandTotal, 2));
+            $subtotal = $price * $quantity;
+            $discountAmount = $subtotal * ($discountPercent / 100);
+            $lineTotal = $subtotal - $discountAmount;
 
-        } catch (\Exception $e) {
-            Log::error("PURCHASE ORDER SAVE ERROR: " . $e->getMessage());
+            $grandTotal += $lineTotal;
 
+            $orderItems[] = [
+                'product_id' => $itemData['product_id'],
+                'quantity'   => $quantity,
+                'unit_price' => $price,
+                'discount'   => $discountPercent,
+                'line_total' => $lineTotal,
+            ];
+        }
+
+        // Ensure at least 1 valid product
+        if (empty($orderItems)) {
             return back()
                 ->withInput()
-                ->with('error', 'An error occurred while creating the Purchase Order: ' . $e->getMessage());
+                ->with('error', 'Please add at least one product with quantity greater than 0.');
         }
+
+        $poNumber = $this->generatePoNumber();
+
+        $purchaseOrder = PurchaseOrder::create([
+            'supplier_id' => $request->supplier_id,
+            'project_name' => $request->project_name,
+            'total_amount' => $grandTotal,
+            'order_date' => now(),
+            'status' => 'Draft',
+            'order_number' => $poNumber,
+        ]);
+
+        $purchaseOrder->items()->createMany($orderItems);
+
+        return redirect()
+            ->route('procurement.order.show', $purchaseOrder)
+            ->with('success', 'Purchase Order #' . ($purchaseOrder->order_number ?? $purchaseOrder->id) . 
+                  ' created successfully! Total: ' . number_format($grandTotal, 2));
+
+    } catch (\Exception $e) {
+
+        Log::error("PURCHASE ORDER SAVE ERROR: " . $e->getMessage());
+
+        return back()
+            ->withInput()
+            ->with('error', 'An error occurred: ' . $e->getMessage());
     }
+}
+
     // ProcurementController.php
 public function showPurchaseOrder(PurchaseOrder $purchaseOrder)
 {
@@ -508,7 +517,7 @@ public function indexPurchaseOrder(Request $request)
             'project_name' => 'nullable|string|max:255',
             'items'       => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity'   => 'required|integer|min:1',
+            'items.*.quantity'   => 'required|integer|min:0',
             'items.*.discount'   => 'nullable|numeric|min:0|max:100',
             // IMPORTANT: We trust the unit_price passed from the form for calculation, 
             // but in a production system, it should be re-validated against the product master.
@@ -609,4 +618,15 @@ public function indexPurchaseOrder(Request $request)
                 ->with('error', 'An error occurred while deleting the Purchase Order. Please check logs.');
         }
     }
+public function downloadPurchaseOrder(PurchaseOrder $purchaseOrder)
+{
+    $safeOrderNumber = str_replace(['/', '\\'], '-', $purchaseOrder->order_number);
+
+    $pdf = Pdf::loadView('procurement.purchase_order.pdf', [
+        'purchaseOrder' => $purchaseOrder
+    ])->setPaper('A4', 'portrait');
+
+    return $pdf->download('PO-' . $safeOrderNumber . '.pdf');
+}
+
 }

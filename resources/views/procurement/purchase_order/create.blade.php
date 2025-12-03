@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="max-w-4xl mx-auto space-y-8">
+<div class="max-w-7xl mx-auto space-y-8">
     
     {{-- Back Button --}}
     <a href="{{ route('procurement.supplier.index') }}" 

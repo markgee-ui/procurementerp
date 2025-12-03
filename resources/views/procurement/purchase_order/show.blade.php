@@ -27,23 +27,68 @@
     </div>
 
     {{-- Action Buttons --}}
-    <div class="flex justify-end space-x-3">
-        
-        {{-- Print Button (Opens the dedicated print view in a new tab) --}}
-        <a href="{{ route('procurement.order.print', $purchaseOrder->id) }}" target="_blank"
-           class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm-5-8h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2z"></path></svg>
-            Print
-        </a>
-
-        {{-- Edit Button (If editing POs is allowed) --}}
-        {{-- Assuming an 'procurement.order.edit' route exists --}}
-        <a href="{{ route('procurement.order.edit', $purchaseOrder->id) }}" 
-           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-7l-2 2m5-5l2 2m-2-2l-3-3m3 3l-3 3"></path></svg>
-            Edit PO
-        </a>
+    <div class="flex justify-end items-center space-x-4">
+    
+    {{-- 1. The Checkbox --}}
+    <div class="flex items-center space-x-4 bg-gray-100 px-4 py-2 rounded-md border border-gray-200">
+    <span class="text-sm font-bold text-gray-700">Display Options:</span>
+    
+    {{-- VAT Checkbox --}}
+    <div class="flex items-center">
+        <input id="vat_toggle" type="checkbox" checked
+            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer">
+        <label for="vat_toggle" class="ml-2 block text-sm font-medium text-gray-700 cursor-pointer select-none">
+            Include VAT (16%)
+        </label>
     </div>
+
+    {{-- Withholding Tax Checkbox --}}
+    <div class="flex items-center">
+        <input id="wht_toggle" type="checkbox" checked
+            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer">
+        <label for="wht_toggle" class="ml-2 block text-sm font-medium text-gray-700 cursor-pointer select-none">
+            Include Withholding Tax (2%)
+        </label>
+    </div>
+
+    {{-- Payable Amount Toggle (Optional but recommended for clarity) --}}
+    <div class="flex items-center">
+        <input id="payable_toggle" type="checkbox" checked
+            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer">
+        <label for="payable_toggle" class="ml-2 block text-sm font-medium text-gray-700 cursor-pointer select-none">
+            Show Payable Amount
+        </label>
+    </div>
+</div>
+
+    {{-- 2. Print Button --}}
+    {{-- NOTICE: id="btn_print" and data-base-href are CRITICAL --}}
+    <a href="{{ route('procurement.order.print', $purchaseOrder->id) }}?include_tax=1" 
+       target="_blank"
+       id="btn_print"
+       data-base-href="{{ route('procurement.order.print', $purchaseOrder->id) }}"
+       class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm-5-8h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2z"></path></svg>
+        Print
+    </a>
+
+    {{-- 3. Download Button --}}
+    {{-- NOTICE: id="btn_download" and data-base-href are CRITICAL --}}
+    <a href="{{ route('procurement.order.download', $purchaseOrder->id) }}?include_tax=1" 
+       target="_blank"
+       id="btn_download"
+       data-base-href="{{ route('procurement.order.download', $purchaseOrder->id) }}"
+       class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        Download PDF
+    </a>
+
+    {{-- Edit Button (unchanged) --}}
+    <a href="{{ route('procurement.order.edit', $purchaseOrder->id) }}" 
+       class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Edit PO
+    </a>
+</div>
 
     {{-- PO Header Info Block --}}
     <div class="bg-white shadow-xl rounded-xl p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -140,5 +185,45 @@
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // New Checkbox IDs
+        const vatToggle = document.getElementById('vat_toggle');
+        const whtToggle = document.getElementById('wht_toggle');
+        const payableToggle = document.getElementById('payable_toggle'); // New
 
+        // Button IDs (Assuming they are named btn_print and btn_download)
+        const printBtn = document.getElementById('btn_print');
+        const downloadBtn = document.getElementById('btn_download');
+
+        function updateUrls() {
+            // Read the state of each toggle, using '1' (on) or '0' (off)
+            const includeVat = vatToggle.checked ? '1' : '0';
+            const includeWht = whtToggle.checked ? '1' : '0';
+            const showPayable = payableToggle.checked ? '1' : '0'; // New parameter
+            
+            // Build the new query string
+            const newQuery = `?include_vat=${includeVat}&include_wht=${includeWht}&show_payable=${showPayable}`;
+
+            // Update both buttons
+            if (printBtn) {
+                printBtn.href = printBtn.getAttribute('data-base-href') + newQuery;
+            }
+            if (downloadBtn) {
+                downloadBtn.href = downloadBtn.getAttribute('data-base-href') + newQuery;
+            }
+            
+            // Optional: Log the URL to console for debugging
+            console.log('New Print URL:', printBtn.href); 
+        }
+
+        // 1. Run immediately on load
+        updateUrls();
+
+        // 2. Run whenever any checkbox state changes
+        vatToggle.addEventListener('change', updateUrls);
+        whtToggle.addEventListener('change', updateUrls);
+        payableToggle.addEventListener('change', updateUrls); // New listener
+    });
+</script>
 @endsection

@@ -211,7 +211,7 @@
                         <div class="col-span-6 sm:col-span-3">
                             <label for="description-0" class="block text-xs font-medium text-gray-600 mb-1">Item Code</label>
                             <input type="text" id="description-0" name="description"
-                                   class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Specifications/Model">
+                                   class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Item Code">
 
                         </div>
                         <div class="col-span-6 sm:col-span-1">
@@ -289,20 +289,21 @@
                                class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Product Name">
                     </div>
                     <div class="col-span-6 sm:col-span-3">
-                        <label for="description-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                        <label for="description-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Item Code</label>
                         <input type="text" id="description-${productRowCounter}" name="description"
-                               class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Specifications/Model">
+                               class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Item Code">
+                    </div>
+                    <div class="col-span-4 sm:col-span-1">
+                        <label for="unit-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Unit <span class="text-red-500"></span></label>
+                        <input type="text" id="unit-${productRowCounter}" name="unit" 
+                               class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="pcs/kg/l">
                     </div>
                     <div class="col-span-4 sm:col-span-1">
                         <label for="unitPrice-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Unit Price <span class="text-red-500">*</span></label>
                         <input type="number" id="unitPrice-${productRowCounter}" name="unitPrice" required step="0.01" min="0.01"
                                class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="0.00">
                     </div>
-                    <div class="col-span-4 sm:col-span-1">
-                        <label for="unit-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Unit Price <span class="text-red-500">*</span></label>
-                        <input type="text" id="unit-${productRowCounter}" name="unit" 
-                               class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="kg">
-                    </div>
+                    
                     <div class="col-span-2 sm:col-span-6 sm:text-right flex items-center justify-end sm:justify-end">
                         <button type="button" onclick="removeProductRow(this)"
                                 class="text-red-500 hover:text-red-700 text-sm font-medium p-1 rounded-md transition-colors">

@@ -22,7 +22,7 @@
     <div class="flex justify-between items-center mb-8 pb-4 border-b border-gray-200">
         <header>
             <h1 class="text-4xl font-extrabold text-gray-900">{{ $supplier->name }}</h1>
-            <p class="text-sm text-gray-500 mt-1">Supplier ID: **{{ $supplier->id }}** | Registered {{ $supplier->created_at->diffForHumans() ?? 'N/A' }}</p>
+            <p class="text-sm text-gray-500 mt-1">Supplier ID: {{ $supplier->id }} | Registered {{ $supplier->created_at->diffForHumans() ?? 'N/A' }}</p>
         </header>
         
         {{-- Edit Button --}}

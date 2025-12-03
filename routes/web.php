@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
        Route::get('/orders/{purchaseOrder}/edit', [ProcurementController::class, 'editPurchaseOrder'])->name('order.edit');
         Route::put('/orders/{purchaseOrder}', [ProcurementController::class, 'updatePurchaseOrder'])->name('order.update');
         Route::delete('/orders/{purchaseOrder}', [ProcurementController::class, 'destroyPurchaseOrder'])->name('order.destroy');
+        Route::get('/order/download/{purchaseOrder}', [ProcurementController::class, 'downloadPurchaseOrder'])->name('order.download');
     });
 });
 

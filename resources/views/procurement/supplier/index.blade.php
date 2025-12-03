@@ -119,9 +119,19 @@
                             </td>
                             
                             {{-- KRA Pin --}}
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-                                {{ $supplier->kra_pin ?? 'N/A' }}
-                            </td>
+<td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">
+
+    @if ($supplier->kra_pin)
+        <span class="px-2 py-1 text-green-700 bg-green-100 border border-green-300 rounded-full text-xs font-semibold">
+            {{ $supplier->kra_pin }}
+        </span>
+    @else
+        <span class="px-2 py-1 text-red-700 bg-red-100 border border-red-300 rounded-full text-xs font-semibold">
+            Not Compliant
+        </span>
+    @endif
+
+</td>
 
                             {{-- Sales Person Contact --}}
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
@@ -172,10 +182,7 @@
                                   <a href="{{ route('procurement.supplier.show', $supplier->id) }}" 
     title="View Supplier Details"
     class="text-teal-600 hover:text-teal-900 transition duration-150 ease-in-out p-1 rounded-md hover:bg-teal-100">
-    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        {{-- DOCUMENT ICON PATH --}}
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-    </svg>
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
 </a>
 
 

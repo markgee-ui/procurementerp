@@ -5,7 +5,6 @@
 @section('content')
     <header class="mb-8">
         <h1 class="text-3xl font-bold text-gray-800">Edit Product: {{ $product->item }}</h1>
-        <p class="text-gray-600 mt-1">Modify the details for this specific product.</p>
     </header>
 
     <div class="bg-white rounded-xl shadow-lg p-6 max-w-5xl mx-auto">
@@ -39,7 +38,7 @@
 
                 {{-- Description --}}
                 <div>
-                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <label for="description" class="block text-sm font-medium text-gray-700">Item Code</label>
                     <textarea name="description" id="description" rows="3"
                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">{{ old('description', $product->description) }}</textarea>
                 </div>
