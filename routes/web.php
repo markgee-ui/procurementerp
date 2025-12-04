@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\QuantitySurveyorController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,7 +23,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware('auth')->group(function () {
 
-    Route::prefix('procurement')->name('procurement.')->group(function () {
+    Route::prefix('procurement')->name('procurement.')->middleware('role:procurement')->group(function () {
 
         // GET /procurement/create
         Route::get('/create', [ProcurementController::class, 'create'])
@@ -50,6 +51,16 @@ Route::middleware('auth')->group(function () {
         Route::put('/orders/{purchaseOrder}', [ProcurementController::class, 'updatePurchaseOrder'])->name('order.update');
         Route::delete('/orders/{purchaseOrder}', [ProcurementController::class, 'destroyPurchaseOrder'])->name('order.destroy');
         Route::get('/order/download/{purchaseOrder}', [ProcurementController::class, 'downloadPurchaseOrder'])->name('order.download');
+    });
+
+   Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
+        
+        // QS Dashboard (The original index)
+        Route::get('/', [QuantitySurveyorController::class, 'index'])->name('index'); 
+        // NEW: Show the BoQ creation form
+        Route::get('/boq/create', [QuantitySurveyorController::class, 'createBoq'])->name('boq.create'); 
+
+        Route::post('/boq/store', [QuantitySurveyorController::class, 'storeBoq'])->name('boq.store');
     });
 });
 

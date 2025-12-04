@@ -24,7 +24,9 @@ class AuthController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function login(Request $request)
+   // app/Http/Controllers/AuthController.php
+
+public function login(Request $request)
 {
     // Validate user input
     $credentials = $request->validate([
@@ -37,22 +39,38 @@ class AuthController extends Controller
 
         // Get logged in user
         $user = Auth::user();
+        
+        // 💡 NEW: Define allowed roles
+        $allowedRoles = ['procurement', 'qs']; 
 
-        // Check role
-        if ($user->role !== 'procurement') {
+        // Check role authorization
+        if (!in_array($user->role, $allowedRoles)) {
 
             // Logout unauthorized user
             Auth::logout();
 
             return back()->withErrors([
-                'email' => 'Access denied. Only Procurement Officers can log in.',
+                'email' => 'Access denied. Your user role is not authorized to use this system.',
             ]);
         }
 
-        //Authenticated & authorized
+        // Authenticated & authorized. Determine correct redirect route based on role.
+        if ($user->role === 'procurement') {
+            $intendedRoute = route('procurement.create');
+            $message = 'Welcome back, Procurement Officer!';
+        } elseif ($user->role === 'qs') {
+            // Send QS Officers to the QS Index
+            $intendedRoute = route('qs.index');
+            $message = 'Welcome back, Quality & Standards Officer!';
+        } else {
+            // Fallback for an authorized but unexpected role
+            $intendedRoute = route('login'); 
+            $message = 'Welcome back!';
+        }
+
         return redirect()
-            ->intended(route('procurement.create'))
-            ->with('success', 'Welcome back, Procurement Officer!');
+            ->intended($intendedRoute)
+            ->with('success', $message);
     }
 
     // Invalid credentials

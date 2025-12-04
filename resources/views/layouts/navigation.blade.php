@@ -58,4 +58,27 @@
             Reports
         </a>
     </li>
+    <li>
+        <a href="{{ route('qs.index') }}" 
+           class="sidebar-link flex items-center p-3 rounded-lg hover:bg-gray-700 
+           {{ request()->routeIs('qs.*') ? 'bg-gray-700 text-white' : '' }}">
+            {{-- Quality & Standards Icon (Checkmark/Scales) --}}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            Planning
+        </a>
+    </li>
+    
+    <li>
+        <a href="{{ route('qs.boq.create') }}" 
+           class="sidebar-link flex items-center pl-8 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-700 
+           {{ request()->routeIs('qs.boq.create') ? 'font-bold text-white' : '' }}">
+            {{-- Add Icon --}}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Create Bill of Quantities
+        </a>
+    </li>
 </ul>

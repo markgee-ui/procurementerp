@@ -116,95 +116,103 @@
             </tbody>
         </table>
     </div>
+@php
+    // Toggle values from request (defaults to ON)
+    $showVat      = request('include_vat', '1') == '1';
+    $showWht      = request('include_wht', '1') == '1';
+    $showPayable  = request('show_payable', '1') == '1';
 
-    @php
-    // 1. Read individual toggles from the request. Default to '1' (checked) if not present.
-    $showVat = (request('include_vat', '1') == '1');
-    $showWht = (request('include_wht', '1') == '1');
-    $showPayable = (request('show_payable', '1') == '1'); 
-
+    // Base Net amount
     $netAmount = $purchaseOrder->total_amount;
 
-    $vatAmount = 0;
-    $withholdingAmount = 0;
-    $payableAmount = $netAmount; // Initialize payable to net
-    $grandTotal = $netAmount;    // Initialize grand total to net
+    // VAT calculation
+    $vatAmount = $showVat ? ($netAmount * 0.16) : 0;
 
-    // 2. Calculate VAT if toggled
-    if ($showVat) {
-        $vatRate = 0.16;
-        $vatAmount = $netAmount * $vatRate;
-    }
-
-    // Grand Total is always Net + Calculated VAT
+    // Grand Total (VAT inclusive)
     $grandTotal = $netAmount + $vatAmount;
 
-    // 3. Calculate WHT and Payable amount if either VAT or WHT is needed for the calculation
-    if ($showVat || $showWht) {
-        // The Payable calculation requires the VAT-inclusive amount ($grandTotal)
-        // Withholding formula
-        $calculatedPayable = ($grandTotal * 1.14) / 1.16;
-        $calculatedWht = $grandTotal - $calculatedPayable;
+    // Default values
+    $payableAmount = $netAmount;
+    $withholdingAmount = 0;
 
-        // Assign the actual Payable Amount (calculated amount)
-        $payableAmount = $calculatedPayable;
-        
-        // Only display the Withholding Amount if the user specifically requested it
-        if ($showWht) {
-            $withholdingAmount = $calculatedWht;
-        }
-    } else {
-        // If neither tax is included, Payable is just the Net Amount
-        $payableAmount = $netAmount;
+    // Apply Payable formula only if VAT or WHT enabled
+    if ($showVat || $showWht) {
+        // PAYABLE = Grand Total × 1.14 / 1.16
+        $payableAmount = ($grandTotal * 1.14) / 1.16;
+    }
+
+    // WHT = 2% of Grand Total
+    if ($showWht) {
+        // EXACT rule: 2% of Grand Total
+        $withholdingAmount = ($grandTotal * 1.14 / 1.16 - $grandTotal) * -1;
     }
 @endphp
 
+
+
 <div class="flex justify-between">
     <div class="w-1/2 pr-4">
-        <h3 class="text-sm font-bold tracking-wider text-gray-600 mb-2 border-b">Project Name</h3>
-        <p class="text-gray-700 italic text-sm">{{ $purchaseOrder->project_name ?? 'N/A' }}</p>
+        <h3 class="text-sm font-bold tracking-wider text-gray-600 mb-2 border-b">
+            Project Name
+        </h3>
+        <p class="text-gray-700 italic text-sm">
+            {{ $purchaseOrder->project_name ?? 'N/A' }}
+        </p>
     </div>
+
     <div class="w-1/3">
         <div class="space-y-1 text-sm">
-            
-            {{-- Net Amount --}}
+
+            {{-- NET AMOUNT --}}
             <div class="flex justify-between font-medium border-b pb-1">
                 <span>NET AMOUNT:</span>
-                <span class="text-sm font-bold">KSH  {{ number_format($netAmount, 2) }} </span>
+                <span class="font-bold">
+                    KSH {{ number_format($netAmount, 2) }}
+                </span>
             </div>
-            
-            {{-- VAT TAX (16%): Only show if VAT checkbox was checked --}}
+
+            {{-- VAT 16% --}}
             @if($showVat)
-            <div class="text-sm flex justify-between font-medium text-red-600 mt-1">
+            <div class="flex justify-between font-medium text-red-600 mt-1">
                 <span>VAT TAX (16%):</span>
-                <span class="font-bold">KSH  {{ number_format($vatAmount, 2) }}</span>
+                <span class="font-bold">
+                    KSH {{ number_format($vatAmount, 2) }}
+                </span>
             </div>
             @endif
 
-            {{-- Withholding Tax (2%): Only show if WHT checkbox was checked --}}
+            {{-- WHT 2% --}}
             @if($showWht)
-            <div class="text-sm flex justify-between font-medium text-red-600">
+            <div class="flex justify-between font-medium text-red-600">
                 <span>Withholding Tax (2%):</span>
-                <span class="font-bold">KSH  {{ number_format($withholdingAmount, 2) }}</span>
+                <span class="font-bold">
+                    KSH {{ number_format($withholdingAmount, 2) }}
+                </span>
             </div>
             @endif
 
-            {{-- PAYABLE AMOUNT: Show if any tax is active OR the "show payable" toggle is checked --}}
+            {{-- PAYABLE AMOUNT --}}
             @if($showVat || $showWht || $showPayable)
-            <div class="text-sm flex justify-between font-medium mt-2 pt-1 border-t border-gray-300">
+            <div class="flex justify-between font-medium mt-2 pt-1 border-t border-gray-300">
                 <span>PAYABLE AMOUNT:</span>
-                <span class="font-bold">KSH  {{ number_format($payableAmount, 2) }}</span>
+                <span class="font-bold">
+                    KSH {{ number_format($payableAmount, 2) }}
+                </span>
             </div>
             @endif
 
-            {{-- Grand Total --}}
-            <div class="text-sm flex justify-between font-medium border-t border-gray-700 pt-2 mt-2">
+            {{-- GRAND TOTAL --}}
+            <div class="flex justify-between font-medium border-t border-gray-700 pt-2 mt-2">
                 <span>GRAND TOTAL:</span>
-                <span class="font-bold ">KSH  {{ number_format($grandTotal, 2) }}</span>
+                <span class="font-bold">
+                    KSH {{ number_format($grandTotal, 2) }}
+                </span>
             </div>
+
         </div>
     </div>
 </div>
+
 
     <!-- SIGNATURES -->
     <div class="mt-16 pt-6 border-t border-gray-400 flex justify-around text-center text-xs">

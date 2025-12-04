@@ -128,89 +128,78 @@
             </td>
 
            <td width="40%">
-    @php
-        // 1. Read individual toggles from the request. Default to '1' (checked) if not present.
-        // We check for the string '1' to be safe against different request contexts.
-        $showVat = (request('include_vat', '1') == '1');
-        $showWht = (request('include_wht', '1') == '1');
-        $showPayable = (request('show_payable', '1') == '1'); // Check for showing the Payable row
+@php
+    $showVat      = request('include_vat', '1') == '1';
+    $showWht      = request('include_wht', '1') == '1';
+    $showPayable  = request('show_payable', '1') == '1';
 
-        $net = $purchaseOrder->total_amount;
+    $netAmount = $purchaseOrder->total_amount;
 
-        $vat = 0;
-        $withholding = 0;
-        $payable = $net; // Initialize payable to net
-        $grand = $net;   // Initialize grand to net
+    // VAT = 16%
+    $vatAmount = $showVat ? ($netAmount * 0.16) : 0;
 
-        // 2. Calculate VAT if toggled
-        if ($showVat) {
-            $vat = $net * 0.16;
-        }
+    // Grand = Net + VAT
+    $grandTotal = $netAmount + $vatAmount;
 
-        // Grand Total is always Net + Calculated VAT
-        $grand = $net + $vat;
+    // Default values
+    $payableAmount = $netAmount;
+    $withholdingAmount = 0;
 
-        // 3. Calculate WHT and Payable amount if either VAT or WHT is needed for the calculation
-        if ($showVat || $showWht) {
-            // The Payable calculation requires the VAT-inclusive amount ($grand)
-            // Withholding formula (KSH specific)
-            $calculatedPayable = ($grand * 1.14) / 1.16;
-            $calculatedWithholding = $grand - $calculatedPayable;
+    // PAYABLE using formula
+    if ($showVat || $showWht) {
+        $payableAmount = ($grandTotal * 1.14) / 1.16;
+    }
 
-            // Assign the Payable Amount (calculated amount regardless of $showWht display toggle)
-            $payable = $calculatedPayable;
-            
-            // Only assign the Withholding Amount if the user specifically wants to show it
-            if ($showWht) {
-                $withholding = $calculatedWithholding;
-            }
-        } else {
-            // If neither VAT nor WHT is toggled, Grand Total is just Net, and Payable is Net.
-            $payable = $net;
-            $grand = $net;
-        }
-    @endphp
+    // WHT = Grand − Payable
+    if ($showWht) {
+        $withholdingAmount = $grandTotal - $payableAmount;
+    }
+@endphp
 
-    <table>
-        <tr>
-            <td><strong>Net Amount:</strong></td>
-            <td text-align="right"><strong>KSH {{ number_format($net, 2) }}</strong></td>
-        </tr>
 
-        {{-- VAT Row: Only show if VAT checkbox was checked --}}
-        @if($showVat)
-        <tr>
-            <td>VAT (16%):</td>
-            <td text-align="right" style="color:red;"><strong>KSH {{ number_format($vat, 2) }}</strong></td>
-        </tr>
-        @endif
 
-        {{-- Withholding Tax Row: Only show if WHT checkbox was checked --}}
-        @if($showWht)
-        <tr>
-            <td>Withholding Tax(2%):</td>
-            <td text-align="right" style="color:red;">
-                <strong>KSH {{ number_format($withholding, 2) }}</strong>
-            </td>
-        </tr>
-        @endif
+<table>
+    <tr>
+        <td><strong>Net Amount:</strong></td>
+        <td text-align="right"><strong>KSH {{ number_format($netAmount, 2) }}</strong></td>
+    </tr>
 
-        {{-- Payable Amount Row: Show if either tax is active OR the "show payable" toggle is checked --}}
-        @if($showVat || $showWht || $showPayable)
-        <tr>
-            <td><strong>PAYABLE AMOUNT:</strong></td>
-            <td text-align="right">
-                <strong>KSH {{ number_format($payable, 2) }}</strong>
-            </td>
-        </tr>
-        @endif
+    {{-- VAT: show if selected --}}
+    @if($showVat)
+    <tr>
+        <td>VAT (16%):</td>
+        <td text-align="right" style="color:red;">
+            <strong>KSH {{ number_format($vatAmount, 2) }}</strong>
+        </td>
+    </tr>
+    @endif
 
-        <tr>
-            <td><strong>GRAND TOTAL:</strong></td>
-            <td text-align="right"><strong>KSH {{ number_format($grand, 2) }}</strong></td>
-        </tr>
-    </table>
-</td>
+    {{-- Withholding Tax: calculated from Grand Total --}}
+    @if($showWht)
+    <tr>
+        <td>Withholding Tax (2%):</td>
+        <td text-align="right" style="color:red;">
+            <strong>KSH {{ number_format($withholdingAmount, 2) }}</strong>
+        </td>
+    </tr>
+    @endif
+
+    {{-- Payable amount --}}
+    @if($showVat || $showWht || $showPayable)
+    <tr>
+        <td><strong>PAYABLE AMOUNT:</strong></td>
+        <td text-align="right">
+            <strong>KSH {{ number_format($payableAmount, 2) }}</strong>
+        </td>
+    </tr>
+    @endif
+
+    <tr>
+        <td><strong>GRAND TOTAL:</strong></td>
+        <td text-align="right"><strong>KSH {{ number_format($grandTotal, 2) }}</strong></td>
+    </tr>
+</table>
+
         </tr>
     </table>
     <!-- SIGNATURES -->
