@@ -138,7 +138,7 @@
     // Apply Payable formula only if VAT or WHT enabled
     if ($showVat || $showWht) {
         // PAYABLE = Grand Total × 1.14 / 1.16
-        $payableAmount = ($grandTotal * 1.14) / 1.16;
+        $payableAmount = ($grandTotal * 1.14) / 1.16;                                                                                                               
     }
 
     // WHT = 2% of Grand Total

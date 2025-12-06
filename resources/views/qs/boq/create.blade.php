@@ -4,10 +4,7 @@
 @section('content')
 <div class="p-6 bg-white rounded-lg shadow-xl">
     <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7 inline-block mr-2 text-indigo-600">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625c0-1.036-.84-1.875-1.875-1.875h-2.625M19.5 14.25A2.25 2.25 0 0 0 21 12v-2.625c0-1.036-.84-1.875-1.875-1.875H6c-1.036 0-1.875.84-1.875 1.875v8.25c0 1.036.84 1.875 1.875 1.875h.375A2.25 2.25 0 0 1 7.5 21h9a2.25 2.25 0 0 0 2.25-2.25v-2.625Z" />
-        </svg>
-        Bill of Quantities (BoQ) Planning
+        Bill of Quantities (BoQ) 
     </h1>
 
     <form action="{{ route('qs.boq.store') }}" method="POST">
@@ -81,6 +78,10 @@
                     <td class="px-6 py-2 whitespace-nowrap"><input type="text" name="activities[${activityId}][materials][${rowId}][specs]" class="w-full text-sm border-gray-300 rounded-md p-1" placeholder="e.g., 40kg, Aluminum"></td>
                     <td class="px-3 py-2 whitespace-nowrap"><input type="text" name="activities[${activityId}][materials][${rowId}][unit]" class="w-full text-sm border-gray-300 rounded-md p-1" placeholder="e.g., Bag, SqM"></td>
                     <td class="px-3 py-2 whitespace-nowrap"><input type="number" name="activities[${activityId}][materials][${rowId}][qty]" class="w-full text-sm border-gray-300 rounded-md p-1" required min="1"></td>
+                    
+                    {{-- 💡 NEW RATE INPUT ADDED HERE --}}
+                    <td class="px-3 py-2 whitespace-nowrap"><input type="number" name="activities[${activityId}][materials][${rowId}][rate]" class="w-full text-sm border-gray-300 rounded-md p-1" step="0.01" min="0" placeholder="0.00"></td>
+                    
                     <td class="px-6 py-2 whitespace-nowrap"><input type="text" name="activities[${activityId}][materials][${rowId}][remarks]" class="w-full text-sm border-gray-300 rounded-md p-1"></td>
                     <td class="px-2 py-2 whitespace-nowrap">
                         <button type="button" class="text-red-600 hover:text-red-900 remove-row-btn" data-activity-id="${activityId}" data-row="${rowId}">
@@ -152,6 +153,10 @@
                                         <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Specifications</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Unit</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Qty</th>
+                                        
+                                        {{-- 💡 NEW COLUMN HEADER --}}
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Rate (KSH)</th> 
+                                        
                                         <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
                                         <th class="px-2 py-2 w-10"></th>
                                     </tr>

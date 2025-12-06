@@ -81,4 +81,15 @@
             Create Bill of Quantities
         </a>
     </li>
+    <li>
+                <a href="{{ route('qs.boq.index') }}" 
+                   class="sidebar-link flex items-center pl-8 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-700 
+                   {{ request()->routeIs('qs.boq.index') ? 'font-bold text-white' : '' }}">
+                    {{-- List Icon --}}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h1.5M8.25 10.5h1.5M8.25 14.25h1.5m4.5 4.5h3m-12.75-6.75h7.5m-7.5 3h7.5m7.5-3h.75m-7.5-6h.75m7.5-3h.75m-9 12h.75m-7.5 3h7.5M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+                    </svg>
+                    Bill of Quantities List
+                </a>
+            </li>
 </ul>

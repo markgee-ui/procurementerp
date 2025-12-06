@@ -53,15 +53,35 @@ Route::middleware('auth')->group(function () {
         Route::get('/order/download/{purchaseOrder}', [ProcurementController::class, 'downloadPurchaseOrder'])->name('order.download');
     });
 
-   Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
-        
-        // QS Dashboard (The original index)
-        Route::get('/', [QuantitySurveyorController::class, 'index'])->name('index'); 
-        // NEW: Show the BoQ creation form
-        Route::get('/boq/create', [QuantitySurveyorController::class, 'createBoq'])->name('boq.create'); 
+     // In routes/web.php
 
-        Route::post('/boq/store', [QuantitySurveyorController::class, 'storeBoq'])->name('boq.store');
-    });
+Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
+    
+    // QS Dashboard (The original /qs route)
+    Route::get('/', [QuantitySurveyorController::class, 'index'])->name('index'); 
+
+    // --- BoQ Routes ---
+    
+    // Show the list of all created BoQs (New Index Page)
+    Route::get('/boq', [QuantitySurveyorController::class, 'indexBoq'])->name('boq.index'); 
+
+    // Show the BoQ creation form
+    Route::get('/boq/create', [QuantitySurveyorController::class, 'createBoq'])->name('boq.create'); 
+
+    // Store a new BoQ
+    Route::post('/boq', [QuantitySurveyorController::class, 'storeBoq'])->name('boq.store');
+
+    // Show single BoQ (View)
+    Route::get('/boq/{boq}', [QuantitySurveyorController::class, 'showBoq'])->name('boq.show'); // Requires showBoq method
+
+    // Show BoQ edit form
+    Route::get('/boq/{boq}/edit', [QuantitySurveyorController::class, 'editBoq'])->name('boq.edit'); // Requires editBoq method
+    Route::put('/boq/{boq}', [QuantitySurveyorController::class, 'updateBoq'])->name('boq.update');
+
+    // Delete BoQ
+    Route::delete('/boq/{boq}', [QuantitySurveyorController::class, 'destroyBoq'])->name('boq.destroy'); 
+    Route::get('/boq/{boq}/download', [QuantitySurveyorController::class, 'downloadBoq'])->name('boq.download');
+});
 });
 
 /*
