@@ -49,6 +49,15 @@
                     <input type="number" name="unit_price" id="unit_price" value="{{ old('unit_price', $product->unit_price) }}" step="0.01" min="0" required
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                 </div>
+                {{-- Unit --}}
+<div>
+    <label for="unit" class="block text-sm font-medium text-gray-700">Unit</label>
+    <input type="text" name="unit" id="unit"
+           value="{{ old('unit', $product->unit) }}" required
+           placeholder="e.g. PCS, KG, LTR"
+           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+</div>
+
                 
                 {{-- Supplier --}}
                 <div>

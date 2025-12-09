@@ -77,7 +77,7 @@
                                 {{-- Edit Button (Link to qs.boq.edit) --}}
                                 <a href="{{ route('qs.boq.edit', $boq) }}" 
                                    class="text-indigo-600 hover:text-indigo-900" title="Edit">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-4.343 2.828L10 12.071l-.707-.707-1.414-1.414.707-.707zM10 12.071l1.414-1.414 4.243 4.243-5.657 5.657-4.243-4.243z" /></svg>
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-7l-2 2m5-5l2 2m-2-2l-3-3m3 3l-3 3"></path></svg>
                                 </a>
 
                                 {{-- Delete Button (Link to qs.boq.destroy) --}}

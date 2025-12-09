@@ -183,7 +183,7 @@ public function downloadBoq(Boq $boq)
     $boq->load('activities.materials'); 
 
     // Load the Blade view 'qs.boq.show' to be rendered as PDF
-    $pdf = PDF::loadView('qs.boq.show', compact('boq'));
+    $pdf = PDF::loadView('qs.boq.boq_pdf', compact('boq'));
     
     // Set a meaningful file name
     $filename = 'BoQ-' . str_replace(' ', '_', $boq->project_name) . '.pdf';
