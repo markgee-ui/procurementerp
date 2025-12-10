@@ -1,6 +1,24 @@
 @extends('layouts.app') 
 
 @section('content')
+<style>
+    /* Styling for budget feedback */
+    .activity-over-budget {
+        border: 2px solid red !important;
+    }
+    .budget-exceeded-text {
+        color: red;
+        font-weight: bold;
+    }
+    .budget-ok-text {
+        color: green;
+        font-weight: bold;
+    }
+    .activity-section {
+        transition: border-color 0.3s;
+    }
+</style>
+
 <div class="p-6 bg-white rounded-lg shadow-xl">
     <a href="{{ route('qs.boq.index') }}" class="text-sm text-blue-600 hover:text-blue-800 mb-4 inline-block">&larr; Back to BoQ List</a>
     <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">
@@ -34,6 +52,13 @@
             </div>
         @endif
 
+        @if(session('error'))
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                <strong class="font-bold">Error!</strong>
+                <span class="block sm:inline">{{ session('error') }}</span>
+            </div>
+        @endif
+
         <h2 class="text-xl font-bold text-gray-800 mt-8 mb-4">Project Activities & Materials</h2>
 
         {{-- Container for dynamically added Activity Sections --}}
@@ -48,7 +73,7 @@
         </div>
 
         <div class="mt-8 pt-4 border-t">
-            <button type="submit" class="px-6 py-3 text-lg font-bold text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+            <button type="submit" class="px-6 py-3 text-lg font-bold text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" id="submit-boq-btn">
                 Update BoQ
             </button>
         </div>
@@ -61,6 +86,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         
         // --- DATA Initialization from PHP ---
+        // Using existingBoqData to load initial values
         const existingBoqData = @json($boq->load('activities.materials'));
         
         const activityOptions = [
@@ -73,31 +99,50 @@
         
         const container = document.getElementById('activity-sections-container');
         const addActivityBtn = document.getElementById('add-activity-btn');
-        let activityIndex = 0; // Will be initialized to the highest index after loading
+        const submitBtn = document.getElementById('submit-boq-btn');
+        let activityIndex = 0; 
         
         // --- TEMPLATE FUNCTIONS ---
 
         function getMaterialRowTemplate(activityKey, rowKey, material = {}) {
-            // Use existing values or defaults
+            // Include material ID for update logic
+            const materialId = material.id || '';
             const item = material.item || '';
             const specs = material.specs || '';
             const unit = material.unit || '';
             const qty = material.qty || 1;
             const rate = material.rate || 0.00;
             const remarks = material.remarks || '';
+            const lineTotal = (qty * rate).toFixed(2);
 
             return `
-                <tr data-row-id="${activityKey}-${rowKey}">
-                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${rowKey}</td>
-                    <td class="px-6 py-2 whitespace-nowrap"><input type="text" name="activities[${activityKey}][materials][${rowKey}][item]" value="${item}" class="w-full text-sm border-gray-300 rounded-md p-1" required></td>
+                <tr data-row-id="${activityKey}-${rowKey}" class="material-row">
+                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 index-display">${rowKey}</td>
+                    <td class="px-6 py-2 whitespace-nowrap">
+                        ${materialId ? `<input type="hidden" name="activities[${activityKey}][materials][${rowKey}][id]" value="${materialId}">` : ''}
+                        <input type="text" name="activities[${activityKey}][materials][${rowKey}][item]" value="${item}" class="w-full text-sm border-gray-300 rounded-md p-1" required>
+                    </td>
                     <td class="px-6 py-2 whitespace-nowrap"><input type="text" name="activities[${activityKey}][materials][${rowKey}][specs]" value="${specs}" class="w-full text-sm border-gray-300 rounded-md p-1"></td>
                     <td class="px-3 py-2 whitespace-nowrap"><input type="text" name="activities[${activityKey}][materials][${rowKey}][unit]" value="${unit}" class="w-full text-sm border-gray-300 rounded-md p-1"></td>
-                    <td class="px-3 py-2 whitespace-nowrap"><input type="number" name="activities[${activityKey}][materials][${rowKey}][qty]" value="${qty}" class="w-full text-sm border-gray-300 rounded-md p-1" required min="0.01" step="0.01"></td>
-                    <td class="px-3 py-2 whitespace-nowrap"><input type="number" name="activities[${activityKey}][materials][${rowKey}][rate]" value="${rate}" class="w-full text-sm border-gray-300 rounded-md p-1" step="0.01" min="0"></td>
+                    
+                    {{-- INPUTS FOR CALCULATION --}}
+                    <td class="px-3 py-2 whitespace-nowrap">
+                        <input type="number" name="activities[${activityKey}][materials][${rowKey}][qty]" value="${qty}" class="w-full text-sm border-gray-300 rounded-md p-1 input-qty" required min="0.01" step="0.01">
+                    </td>
+                    <td class="px-3 py-2 whitespace-nowrap">
+                        <input type="number" name="activities[${activityKey}][materials][${rowKey}][rate]" value="${rate}" class="w-full text-sm border-gray-300 rounded-md p-1 input-rate" step="0.01" min="0">
+                    </td>
+                    
+                    <td class="px-6 py-2 whitespace-nowrap">
+                        <span class="text-sm font-semibold line-total">${lineTotal}</span> 
+                    </td>
+                    
                     <td class="px-6 py-2 whitespace-nowrap"><input type="text" name="activities[${activityKey}][materials][${rowKey}][remarks]" value="${remarks}" class="w-full text-sm border-gray-300 rounded-md p-1"></td>
                     <td class="px-2 py-2 whitespace-nowrap">
-                        <button type="button" class="text-red-600 hover:text-red-900 remove-row-btn" data-activity-id="${activityKey}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                        <button type="button" class="text-red-600 hover:text-red-900 remove-row-btn" data-action="remove-row">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 pointer-events-none">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
                         </button>
                     </td>
                 </tr>
@@ -105,6 +150,8 @@
         }
 
         function getActivitySectionTemplate(activityKey, activity = {}) {
+            // Include activity ID for update logic
+            const activityId = activity.id || ''; 
             const name = activity.name || '';
             const budget = activity.budget || 0.00;
             
@@ -114,43 +161,65 @@
 
             return `
                 <div class="activity-section bg-white p-4 rounded-lg border border-gray-200" data-activity-id="${activityKey}">
-                    <div class="flex justify-between items-center cursor-pointer bg-gray-100 p-3 rounded-md mb-3 hover:bg-gray-200 toggle-section">
+                    
+                    {{-- Section Header/Toggle with Total Cost Display --}}
+                    <div class="flex justify-between items-center cursor-pointer bg-gray-100 p-3 rounded-md mb-3 hover:bg-gray-200 toggle-section" data-action="toggle-section">
                         <h3 class="text-lg font-semibold text-gray-800">
                             Activity: <span class="activity-name-display">${name || 'New Activity'}</span>
                         </h3>
+                        <span class="text-md font-semibold mr-4">
+                            Total Cost: <span class="activity-total-cost budget-ok-text">KSH 0.00</span>
+                        </span>
                         <div class="flex items-center space-x-3">
-                            <button type="button" class="text-red-600 hover:text-red-900 remove-activity-btn" title="Remove Activity">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
-                            </button>
+                             <button type="button" class="remove-activity-btn text-red-500 hover:text-red-700" data-action="remove-activity" title="Remove Activity">
+                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 pointer-events-none">
+                                     <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0-.97-4.85-2.091-2.091m7.136-1.92L21 21M7.879 2.479c1.522-.733 3.064-.975 4.6-.975 2.87 0 5.4 1.13 7.375 2.97l.115.118a1.5 1.5 0 0 1 0 2.122l-2.9 2.9h-5.25v2.25M11.25 10.5h-5.25v2.25M18 13.5h-2.25v2.25M18 15.75h-2.25v2.25M18 18h-2.25v2.25M18 20.25h-2.25v2.25" />
+                                 </svg>
+                             </button>
+                             <svg class="w-5 h-5 transform rotate-0 transition-transform duration-300 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                             </svg>
                         </div>
                     </div>
-                    <div class="activity-content space-y-4">
+
+                    {{-- Section Content (Collapsible) --}}
+                    <div class="activity-content space-y-4" style="display: block;">
+                        ${activityId ? `<input type="hidden" name="activities[${activityKey}][id]" value="${activityId}">` : ''}
+
+                        {{-- Activity Selector and Budget Input --}}
                         <div class="mb-4 grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Select Activity Group:</label>
-                                <select name="activities[${activityKey}][name]" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border activity-selector">
+                                <select name="activities[${activityKey}][name]" required data-action="update-name"
+                                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border activity-selector">
                                     <option value="">-- Select Activity Group --</option>
                                     ${optionsHtml}
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Budget for this Activity:</label>
-                                <input type="number" name="activities[${activityKey}][budget]" step="0.01" value="${budget}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border">
+                                <label class="block text-sm font-medium text-gray-700">Budget for this Activity (KSH):</label>
+                                <input type="number" name="activities[${activityKey}][budget]" step="0.01" value="${budget}"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border input-activity-budget" 
+                                        placeholder="KSH Activity Budget">
                             </div>
                         </div>
+
                         <h4 class="text-md font-semibold text-gray-700 mt-4 border-b pb-1">Materials Breakdown:</h4>
+
+                        {{-- Materials Table --}}
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Specs</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Sr. No</th>
+                                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">Material/ Item</th>
+                                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">Specifications</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Unit</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Qty</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Rate (KSH)</th> 
+                                        <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Line Total</th>
                                         <th class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
-                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                        <th class="px-2 py-2 w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody class="material-rows-container bg-white divide-y divide-gray-200" data-activity-id="${activityKey}">
@@ -158,7 +227,8 @@
                                 </tbody>
                             </table>
                         </div>
-                        <button type="button" class="add-material-row-btn mt-2 px-3 py-1 text-xs font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600" data-activity-id="${activityKey}">
+
+                        <button type="button" class="add-material-row-btn mt-2 px-3 py-1 text-xs font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600" data-action="add-row">
                             + Add Material Item
                         </button>
                     </div>
@@ -166,7 +236,81 @@
             `;
         }
 
+        // --- CALCULATION AND VALIDATION FUNCTIONS (NEW) ---
+
+        function calculateAndValidateActivity(activityId) {
+            const activitySection = container.querySelector(`.activity-section[data-activity-id="${activityId}"]`);
+            if (!activitySection) return;
+
+            const budgetInput = activitySection.querySelector('.input-activity-budget');
+            const totalCostDisplay = activitySection.querySelector('.activity-total-cost');
+            
+            const activityBudget = parseFloat(budgetInput.value) || 0;
+            let activityRunningTotal = 0;
+
+            // 1. Loop through all material rows in this activity
+            activitySection.querySelectorAll('.material-row').forEach(row => {
+                const qty = parseFloat(row.querySelector('.input-qty').value) || 0;
+                const rate = parseFloat(row.querySelector('.input-rate').value) || 0;
+                const lineTotal = qty * rate;
+
+                // Update the line total display
+                row.querySelector('.line-total').textContent = lineTotal.toFixed(2);
+                activityRunningTotal += lineTotal;
+            });
+            
+            // Format total
+            const formattedTotal = 'KSH ' + activityRunningTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+            // 2. Compare Total Cost vs. Budget
+            let isOverBudget = false;
+
+            if (activityBudget > 0 && activityRunningTotal > activityBudget) {
+                isOverBudget = true;
+                activitySection.classList.add('activity-over-budget');
+                totalCostDisplay.classList.remove('budget-ok-text');
+                totalCostDisplay.classList.add('budget-exceeded-text');
+                totalCostDisplay.textContent = `${formattedTotal} (EXCEEDS KSH ${activityBudget.toFixed(2)})`;
+            } else {
+                activitySection.classList.remove('activity-over-budget');
+                totalCostDisplay.classList.remove('budget-exceeded-text');
+                totalCostDisplay.classList.add('budget-ok-text');
+                totalCostDisplay.textContent = formattedTotal;
+            }
+            
+            // 3. Update main submit button state
+            checkAllBudgets();
+        }
+
+        function checkAllBudgets() {
+            // Checks if ANY activity section is marked as over budget
+            const isAnyOverBudget = document.querySelector('.activity-over-budget') !== null;
+            submitBtn.disabled = isAnyOverBudget;
+            if (isAnyOverBudget) {
+                submitBtn.textContent = '❌ Fix Budget Errors Before Updating';
+            } else {
+                submitBtn.textContent = 'Update BoQ';
+            }
+        }
+        
         // --- HANDLER FUNCTIONS ---
+
+        function updateRowIndexes(activityId) {
+            const materialContainer = container.querySelector(`.material-rows-container[data-activity-id="${activityId}"]`);
+            if (!materialContainer) return;
+            
+            materialContainer.querySelectorAll('.material-row').forEach((row, index) => {
+                row.querySelector('.index-display').textContent = index + 1; 
+                // Re-assign name attribute keys to maintain sequential indexing on submission
+                const newKey = index + 1;
+                row.querySelectorAll('input').forEach(input => {
+                    const originalName = input.name;
+                    // Regex to replace the material index key
+                    const newName = originalName.replace(/(\[materials\]\[)\d+(\]\[)/, `$1${newKey}$2`);
+                    input.name = newName;
+                });
+            });
+        }
         
         function updateActivityDisplayName(event) {
             const selectElement = event.target;
@@ -178,21 +322,27 @@
         function removeActivitySection(event) {
             if (!confirm('Are you sure you want to remove this entire activity section?')) return;
             event.target.closest('.activity-section').remove();
+            checkAllBudgets(); // Re-check after removal
         }
 
         function removeMaterialRow(event) {
-            event.target.closest('tr').remove();
+            const rowToRemove = event.target.closest('tr');
+            const activityId = rowToRemove.closest('.activity-section').dataset.activityId;
+            rowToRemove.remove();
+            updateRowIndexes(activityId);
+            calculateAndValidateActivity(activityId);
         }
         
         function toggleSection(event) {
-             const header = event.target.closest('.toggle-section');
-             if (!header) return;
-             const content = header.nextElementSibling;
-             if (content.style.display === 'none' || content.style.display === '') {
-                 content.style.display = 'block';
-             } else {
-                 content.style.display = 'none';
-             }
+            const header = event.target.closest('.toggle-section');
+            if (!header) return;
+            // Prevent toggling if the remove button was clicked
+            if (event.target.closest('.remove-activity-btn')) return; 
+
+            const content = header.nextElementSibling;
+            const isVisible = content.style.display === 'block' || content.style.display === '';
+
+            content.style.display = isVisible ? 'none' : 'block';
         }
 
         function addActivitySection() {
@@ -200,39 +350,65 @@
             const newActivityHtml = getActivitySectionTemplate(activityIndex);
             container.insertAdjacentHTML('beforeend', newActivityHtml);
             attachListeners();
+            // Recalculate and validate the new section
+            calculateAndValidateActivity(activityIndex);
         }
 
         function addMaterialRow(event) {
             const button = event.target;
-            const activityKey = button.getAttribute('data-activity-id');
-            const tbody = button.closest('.activity-section').querySelector('.material-rows-container');
+            const activitySection = button.closest('.activity-section');
+            const activityKey = activitySection.dataset.activityId;
+            const tbody = activitySection.querySelector('.material-rows-container');
             const nextRowKey = tbody.children.length + 1;
             
             const newRowHtml = getMaterialRowTemplate(activityKey, nextRowKey);
             tbody.insertAdjacentHTML('beforeend', newRowHtml);
-            attachListeners(); 
+            // Recalculate and validate after adding a row
+            calculateAndValidateActivity(activityKey);
         }
 
         function attachListeners() {
-            // Attach/Re-attach listeners for dynamically added elements
+            // Use event delegation for dynamic inputs (Qty, Rate, Budget)
+             document.removeEventListener('input', inputChangeHandler);
+             document.addEventListener('input', inputChangeHandler);
+
+            // Re-attach listeners for dynamically added elements
             container.querySelectorAll('.add-material-row-btn').forEach(btn => {
-                btn.onclick = addMaterialRow;
+                 // Remove existing listener before adding the new one
+                 btn.removeEventListener('click', addMaterialRow);
+                 btn.addEventListener('click', addMaterialRow);
             });
             container.querySelectorAll('.remove-row-btn').forEach(btn => {
-                btn.onclick = removeMaterialRow;
+                 btn.removeEventListener('click', removeMaterialRow);
+                 btn.addEventListener('click', removeMaterialRow);
             });
             container.querySelectorAll('.remove-activity-btn').forEach(btn => {
-                btn.onclick = removeActivitySection;
+                 btn.removeEventListener('click', removeActivitySection);
+                 btn.addEventListener('click', removeActivitySection);
             });
             container.querySelectorAll('.activity-selector').forEach(select => {
-                select.onchange = updateActivityDisplayName;
+                 select.removeEventListener('change', updateActivityDisplayName);
+                 select.addEventListener('change', updateActivityDisplayName);
             });
             container.querySelectorAll('.toggle-section').forEach(header => {
-                 // Clone and replace to prevent multiple event listeners on the same element
-                const clone = header.cloneNode(true);
-                header.parentNode.replaceChild(clone, header);
-                clone.onclick = toggleSection;
+                 header.removeEventListener('click', toggleSection);
+                 header.addEventListener('click', toggleSection);
             });
+        }
+
+        function inputChangeHandler(e) {
+            const target = e.target;
+            // Check if the input affects cost calculation (Qty, Rate, or Activity Budget)
+            if (target.classList.contains('input-qty') || 
+                target.classList.contains('input-rate') ||
+                target.classList.contains('input-activity-budget')) 
+            {
+                const activitySection = target.closest('.activity-section');
+                const activityId = activitySection ? activitySection.dataset.activityId : null;
+                if (activityId) {
+                    calculateAndValidateActivity(activityId);
+                }
+            }
         }
         
         // --- INITIALIZATION FUNCTION ---
@@ -240,32 +416,28 @@
         function loadExistingBoq() {
             let maxId = 0;
             
-            // 1. Find the highest ID among existing activities
-            existingBoqData.activities.forEach(activity => {
-                if (activity.id && activity.id > maxId) {
-                    maxId = activity.id;
-                }
-            });
-            // 2. Set the index for the next *new* activity
-            activityIndex = maxId > 0 ? maxId + 1 : existingBoqData.activities.length + 1;
-            
-            // 3. Render existing activities
-            existingBoqData.activities.forEach((activity, activityKey) => {
-                // Use the activity's actual ID for the name grouping if available, 
-                // otherwise use a safe large index. This is crucial for distinguishing 
-                // existing vs. new records if you plan on complex update logic later.
-                const key = activity.id || (existingBoqData.activities.length + activityKey + 1);
-
-                // We leverage the getActivitySectionTemplate to render both activity and materials
-                const activitySectionHtml = getActivitySectionTemplate(key, activity);
+            // 1. Render existing activities
+            existingBoqData.activities.forEach((activity) => {
+                 // Use the activity's actual ID for the array key
+                const key = activity.id;
+                maxId = Math.max(maxId, key); 
                 
+                const activitySectionHtml = getActivitySectionTemplate(key, activity);
                 container.insertAdjacentHTML('beforeend', activitySectionHtml);
             });
 
-            // 4. Attach listeners to all loaded elements
+            // 2. Set the index for the next *new* activity
+            activityIndex = maxId + 1;
+            
+            // 3. Attach listeners to all loaded elements
             attachListeners();
             
-            // Hide the activity content for all sections initially for a cleaner look
+            // 4. Run initial validation/calculation on all loaded sections
+            existingBoqData.activities.forEach(activity => {
+                 calculateAndValidateActivity(activity.id);
+            });
+
+            // 5. Hide the activity content for all sections initially for a cleaner look
             container.querySelectorAll('.activity-content').forEach(content => {
                 content.style.display = 'none';
             });

@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\QuantitySurveyorController;
-
+use App\Http\Controllers\ProjectManagerController;
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes (Public)
@@ -82,6 +82,17 @@ Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
     Route::delete('/boq/{boq}', [QuantitySurveyorController::class, 'destroyBoq'])->name('boq.destroy'); 
     Route::get('/boq/{boq}/download', [QuantitySurveyorController::class, 'downloadBoq'])->name('boq.download');
 });
+    Route::prefix('pm')->name('pm.')->middleware('role:pm')->group(function () {
+        Route::get('/', [ProjectManagerController::class, 'index'])->name('index');
+        Route::get('/requisitions/create/{project}', [ProjectManagerController::class, 'createRequisition'])->name('requisitions.create');
+        Route::post('/requisitions/store', [ProjectManagerController::class, 'storeRequisition'])->name('requisitions.store');
+        Route::get('requisitions', [ProjectManagerController::class, 'indexRequisitions'])->name('requisitions.index');
+        Route::get('requisitions/{requisition}', [ProjectManagerController::class, 'showRequisition'])->name('requisitions.show');
+        Route::get('requisitions/{requisition}/edit', [ProjectManagerController::class, 'editRequisition'])->name('requisitions.edit');
+        Route::put('requisitions/{requisition}', [ProjectManagerController::class, 'updateRequisition'])->name('requisitions.update');
+        Route::delete('requisitions/{requisition}', [ProjectManagerController::class, 'destroyRequisition'])->name('requisitions.destroy');
+        
+    });
 });
 
 /*

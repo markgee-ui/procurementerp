@@ -92,4 +92,44 @@
                     Bill of Quantities List
                 </a>
             </li>
+
+            <li>
+        {{-- Main PM Link (Project List) --}}
+        <a href="{{ route('pm.index') }}" 
+           class="sidebar-link flex items-center p-3 rounded-lg hover:bg-gray-700 
+           {{ request()->routeIs('pm.index') || request()->routeIs('pm.requisitions.*') ? 'bg-gray-700 text-white' : '' }}">
+            {{-- Project Icon (Hardhat/Construction) --}}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75v-2.25m3 3h-3m4.5-5.25v7.5m1.5 1.5h-.75m-14.25-5.25h15" />
+            </svg>
+            Project Site Management
+        </a>
+    </li>
+    
+    <li>
+        {{-- Create PR Link --}}
+        {{-- Note: This is an index page showing projects from which to create a PR --}}
+        <a href="{{ route('pm.index') }}" 
+           class="sidebar-link flex items-center pl-8 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-700 
+           {{ request()->routeIs('pm.requisitions.create') ? 'font-bold text-white' : '' }}">
+            {{-- Create Icon --}}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Create Purchase Requisition
+        </a>
+    </li>
+
+    <li>
+        {{-- View PRs Link --}}
+        <a href="{{ route('pm.requisitions.index') }}" 
+           class="sidebar-link flex items-center pl-8 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-700 
+           {{ request()->routeIs('pm.requisitions.index') ? 'font-bold text-white' : '' }}">
+            {{-- List Icon --}}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h14.25M3 9h14.25m-14.25 4.5h14.25M3 18h14.25m3-13.5v7.5a.75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75V4.5" />
+            </svg>
+            Submitted Requisitions
+        </a>
+    </li>
 </ul>

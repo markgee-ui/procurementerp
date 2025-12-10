@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Boq;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Validation\Rule; // Added for validation
 
 class QuantitySurveyorController extends Controller
 {
@@ -14,139 +15,118 @@ class QuantitySurveyorController extends Controller
      */
     public function index()
     {
-        // This remains the dashboard/index route for the QS module (e.g., /qs)
-        // You will eventually return the main QS dashboard view here.
-        return view('qs.index'); 
+        return view('qs.index');
     }
+    
     public function indexBoq(Request $request)
     {
-        // Start building the query
         $query = Boq::query();
-
-        // --- Filtering Logic ---
         if ($request->has('search') && $request->search != '') {
             $query->where('project_name', 'like', '%' . $request->search . '%');
         }
-
-        // Example: Filter by project budget range
         if ($request->has('min_budget') && is_numeric($request->min_budget)) {
             $query->where('project_budget', '>=', $request->min_budget);
         }
         
-        // Fetch the BoQs with pagination
-        $boqs = $query->latest()->paginate(10); 
+        $boqs = $query->latest()->paginate(10);
         
-        // Pass the BoQs and current filter values to the view
         return view('qs.boq.index', compact('boqs'));
     }
 
-    /**
-     * Show the form for creating a new Bill of Quantities (BoQ) for a project.
-     * Corresponds to the BoQ creation form view.
-     * * @return \Illuminate\View\View
-     */
     public function createBoq()
     {
-        // Renders the view containing the BoQ input form (the one we just created)
         return view('qs.boq.create');
     }
 
     /**
-     * Store a newly created Bill of Quantities (BoQ) in storage.
-     * This method handles the POST request from the BoQ creation form.
+     * Store a newly created Bill of Quantities (BoQ) in storage, including budget check.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
-  public function storeBoq(Request $request)
-{
-    // 1. Comprehensive Validation
-    $data = $request->validate([
-        'project_name' => 'required|string|max:255',
-        'project_budget' => 'nullable|numeric|min:0',
-        
-        // Validate the main activities array
-        'activities' => 'required|array',
-        'activities.*.name' => 'required|string|max:100', // e.g., 'foundation'
-        'activities.*.budget' => 'nullable|numeric|min:0',
-        
-        // Validate the nested materials array
-        'activities.*.materials' => 'required|array',
-        'activities.*.materials.*.item' => 'required|string|max:255',
-        'activities.*.materials.*.specs' => 'nullable|string|max:255',
-        'activities.*.materials.*.unit' => 'nullable|string|max:50',
-        'activities.*.materials.*.qty' => 'required|numeric|min:0.01',
-        'activities.*.materials.*.rate' => 'required|numeric|min:0', 
-        'activities.*.materials.*.remarks' => 'nullable|string|max:500',
-    ]);
-    
-    try {
-        // 2. Save the main BoQ/Project record
-        $boq = Boq::create([
-            'project_name' => $data['project_name'],
-            'project_budget' => $data['project_budget'],
-            // 'user_id' => auth()->id(), // Optional: Link to a user/QS
-        ]);
-
-        // 3. Loop through activities and save materials
-        foreach ($data['activities'] as $activityData) {
+    public function storeBoq(Request $request)
+    {
+        // 1. Comprehensive Validation
+        $data = $request->validate([
+            'project_name' => 'required|string|max:255',
+            'project_budget' => 'nullable|numeric|min:0',
             
-            // Create the BoQ Activity record
-            $activity = $boq->activities()->create([
-                'name' => $activityData['name'],
-                'budget' => $activityData['budget'],
+            'activities' => 'required|array',
+            'activities.*.name' => 'required|string|max:100',
+            'activities.*.budget' => 'nullable|numeric|min:0',
+            
+            'activities.*.materials' => 'required|array',
+            'activities.*.materials.*.item' => 'required|string|max:255',
+            'activities.*.materials.*.specs' => 'nullable|string|max:255',
+            'activities.*.materials.*.unit' => 'nullable|string|max:50',
+            'activities.*.materials.*.qty' => 'required|numeric|min:0.01',
+            'activities.*.materials.*.rate' => 'required|numeric|min:0', 
+            'activities.*.materials.*.remarks' => 'nullable|string|max:500',
+        ]);
+        
+        try {
+            // Server-Side Budget Checks BEFORE saving anything
+            foreach ($data['activities'] as $activityData) {
+                $activityBudget = (float) $activityData['budget'];
+                $calculatedActivityTotal = 0;
+                
+                // Calculate total cost for the materials in this activity
+                if (isset($activityData['materials']) && is_array($activityData['materials'])) {
+                    foreach ($activityData['materials'] as $material) {
+                        $calculatedActivityTotal += ((float) $material['qty'] * (float) $material['rate']);
+                    }
+                }
+                
+                // Check if budget is defined AND total exceeds it
+                if ($activityBudget > 0 && $calculatedActivityTotal > $activityBudget) {
+                    return back()
+                        ->withInput()
+                        ->with('error', "Budget Error: The calculated total cost (KSH " . number_format($calculatedActivityTotal, 2) . ") for activity '{$activityData['name']}' exceeds the allocated budget (KSH " . number_format($activityBudget, 2) . ").");
+                }
+            }
+            
+            // 2. Save the main BoQ/Project record
+            $boq = Boq::create([
+                'project_name' => $data['project_name'],
+                'project_budget' => $data['project_budget'],
             ]);
 
-            // Prepare materials array: array_values() ensures the materials array is 
-            // numerically indexed (0, 1, 2...), which is compatible with createMany(), 
-            // even if the form keys were non-sequential.
-            $materialsData = array_values($activityData['materials']);
+            // 3. Loop through activities and save materials (Now that checks have passed)
+            foreach ($data['activities'] as $activityData) {
+                
+                $activity = $boq->activities()->create([
+                    'name' => $activityData['name'],
+                    'budget' => $activityData['budget'],
+                ]);
 
-            // Save the materials using createMany(), which automatically sets the boq_activity_id
-            $activity->materials()->createMany($materialsData); 
-        }
+                $materialsData = array_values($activityData['materials']);
+                $activity->materials()->createMany($materialsData); 
+            }
 
-        // 4. Redirection
-        return redirect()
-            ->route('qs.index') 
-            ->with('success', 'Bill of Quantities successfully saved for **' . $data['project_name'] . '**. All ' . count($data['activities']) . ' activities recorded.');
+            // 4. Redirection
+            return redirect()
+                ->route('qs.index') 
+                ->with('success', 'Bill of Quantities successfully saved for **' . $data['project_name'] . '**. All ' . count($data['activities']) . ' activities recorded.');
+                
+        } catch (\Exception $e) {
+            \Log::error("BoQ Store Error: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             
-    } catch (\Exception $e) {
-        // Log the error for debugging
-        \Log::error("BoQ Store Error: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-        
-        return back()
-            ->withInput()
-            ->with('error', 'Failed to save the BoQ. Please check the data and try again.');
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to save the BoQ. Please check the data and try again.');
+        }
     }
-}
-/**
-     * Display the specified Bill of Quantities (BoQ) and its details.
-     * Corresponds to the 'qs.boq.show' route.
-     *
-     * @param \App\Models\Boq $boq
-     * @return \Illuminate\View\View
-     */
+
     public function showBoq(Boq $boq)
     {
-        // Eager load related activities and materials for efficient display
         $boq->load('activities.materials');
-
         return view('qs.boq.show', compact('boq'));
     }
-    /**
-     * Show the form for editing the specified Bill of Quantities (BoQ).
-     * Corresponds to the 'qs.boq.edit' route.
-     *
-     * @param \App\Models\Boq $boq
-     * @return \Illuminate\View\View
-     */
+
     public function editBoq(Boq $boq)
     {
-        // Eager load data needed for the form
         $boq->load('activities.materials');
 
-        // Example data for activity options (Same as in your JS template)
         $activityOptions = [
             'foundation' => 'Foundation',
             'masonry' => 'Walling/Masonry',
@@ -157,11 +137,127 @@ class QuantitySurveyorController extends Controller
 
         return view('qs.boq.edit', compact('boq', 'activityOptions'));
     }
-/**
-     * Remove the specified BoQ from storage.
-     * @param int $id
+
+    /**
+     * Update the specified BoQ in storage, including budget check.
+     * * @param \Illuminate\Http\Request $request
+     * @param \App\Models\Boq $boq
      * @return \Illuminate\Http\RedirectResponse
      */
+    public function updateBoq(Request $request, Boq $boq) 
+    {
+        // 1. Validation (Similar to store, but account for IDs if present)
+        $data = $request->validate([
+            'project_name' => 'required|string|max:255',
+            'project_budget' => 'nullable|numeric|min:0',
+            
+            'activities' => 'required|array',
+            'activities.*.id' => 'nullable|integer|exists:boq_activities,id', // For existing activities
+            'activities.*.name' => 'required|string|max:100',
+            'activities.*.budget' => 'nullable|numeric|min:0',
+            
+            'activities.*.materials' => 'required|array',
+            'activities.*.materials.*.id' => 'nullable|integer|exists:boq_materials,id', // For existing materials
+            'activities.*.materials.*.item' => 'required|string|max:255',
+            'activities.*.materials.*.specs' => 'nullable|string|max:255',
+            'activities.*.materials.*.unit' => 'nullable|string|max:50',
+            'activities.*.materials.*.qty' => 'required|numeric|min:0.01',
+            'activities.*.materials.*.rate' => 'required|numeric|min:0', 
+            'activities.*.materials.*.remarks' => 'nullable|string|max:500',
+        ]);
+
+        try {
+             // Server-Side Budget Checks BEFORE saving anything
+            foreach ($data['activities'] as $activityData) {
+                $activityBudget = (float) $activityData['budget'];
+                $calculatedActivityTotal = 0;
+                
+                if (isset($activityData['materials']) && is_array($activityData['materials'])) {
+                    foreach ($activityData['materials'] as $material) {
+                        $calculatedActivityTotal += ((float) $material['qty'] * (float) $material['rate']);
+                    }
+                }
+                
+                if ($activityBudget > 0 && $calculatedActivityTotal > $activityBudget) {
+                    return back()
+                        ->withInput()
+                        ->with('error', "Budget Error: The calculated total cost (KSH " . number_format($calculatedActivityTotal, 2) . ") for activity '{$activityData['name']}' exceeds the allocated budget (KSH " . number_format($activityBudget, 2) . ").");
+                }
+            }
+
+            // 2. Update the main BoQ record
+            $boq->update([
+                'project_name' => $data['project_name'],
+                'project_budget' => $data['project_budget'],
+            ]);
+
+            // 3. Sync Activities and Materials (Complex but necessary for dynamic nested forms)
+            $activityIdsToKeep = [];
+
+            foreach ($data['activities'] as $activityData) {
+                
+                // Determine if we are updating an existing activity or creating a new one
+                if (isset($activityData['id'])) {
+                    $activity = $boq->activities()->find($activityData['id']);
+                    // If activity is found, update it. If not found, skip or log (depends on your desired error handling)
+                    if ($activity) {
+                        $activity->update([
+                            'name' => $activityData['name'],
+                            'budget' => $activityData['budget'],
+                        ]);
+                    } else {
+                        // Skip or log if existing ID is provided but model not found
+                        continue;
+                    }
+                } else {
+                    // Create a new activity
+                    $activity = $boq->activities()->create([
+                        'name' => $activityData['name'],
+                        'budget' => $activityData['budget'],
+                    ]);
+                }
+
+                $activityIdsToKeep[] = $activity->id;
+                
+                $materialIdsToKeep = [];
+                
+                foreach ($activityData['materials'] as $materialData) {
+                    if (isset($materialData['id'])) {
+                        // Update existing material
+                        $material = $activity->materials()->find($materialData['id']);
+                        if ($material) {
+                            $material->update($materialData);
+                        }
+                    } else {
+                        // Create new material
+                        $material = $activity->materials()->create($materialData);
+                    }
+                    $materialIdsToKeep[] = $material->id;
+                }
+                
+                // Delete materials that were removed from the form
+                $activity->materials()->whereNotIn('id', $materialIdsToKeep)->delete();
+            }
+
+            // Delete activities that were removed from the form
+            $boq->activities()->whereNotIn('id', $activityIdsToKeep)->delete();
+
+
+            // 4. Redirection
+            return redirect()
+                ->route('qs.boq.index')
+                ->with('success', 'Bill of Quantities for **' . $boq->project_name . '** updated successfully!');
+
+        } catch (\Exception $e) {
+            \Log::error("BoQ Update Error: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to update the BoQ. Please check the data and try again.');
+        }
+    }
+
+
     public function destroyBoq(Boq $boq)
     {
         $boq->delete();
@@ -170,25 +266,15 @@ class QuantitySurveyorController extends Controller
             ->route('qs.boq.index')
             ->with('success', 'Bill of Quantities for **' . $boq->project_name . '** deleted successfully.');
     }
-    /**
- * Downloads the detailed BoQ view as a PDF.
- * Corresponds to the 'qs.boq.download' route.
- *
- * @param Boq $boq
- * @return \Illuminate\Http\Response
- */
-public function downloadBoq(Boq $boq)
-{
-    // Load necessary relationships for the view
-    $boq->load('activities.materials'); 
 
-    // Load the Blade view 'qs.boq.show' to be rendered as PDF
-    $pdf = PDF::loadView('qs.boq.boq_pdf', compact('boq'));
-    
-    // Set a meaningful file name
-    $filename = 'BoQ-' . str_replace(' ', '_', $boq->project_name) . '.pdf';
+    public function downloadBoq(Boq $boq)
+    {
+        $boq->load('activities.materials'); 
 
-    // Stream or download the PDF
-    return $pdf->download($filename);
-}
+        $pdf = Pdf::loadView('qs.boq.boq_pdf', compact('boq'));
+        
+        $filename = 'BoQ-' . str_replace(' ', '_', $boq->project_name) . '.pdf';
+
+        return $pdf->download($filename);
+    }
 }
