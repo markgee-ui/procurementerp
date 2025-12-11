@@ -89,8 +89,9 @@ Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
         Route::get('requisitions', [ProjectManagerController::class, 'indexRequisitions'])->name('requisitions.index');
         Route::get('requisitions/{requisition}', [ProjectManagerController::class, 'showRequisition'])->name('requisitions.show');
         Route::get('requisitions/{requisition}/edit', [ProjectManagerController::class, 'editRequisition'])->name('requisitions.edit');
-        Route::put('requisitions/{requisition}', [ProjectManagerController::class, 'updateRequisition'])->name('requisitions.update');
+        Route::patch('requisitions/{requisition}', [ProjectManagerController::class, 'updateRequisition'])->name('requisitions.update');
         Route::delete('requisitions/{requisition}', [ProjectManagerController::class, 'destroyRequisition'])->name('requisitions.destroy');
+        Route::get('requisitions/{requisition}/pdf', [ProjectManagerController::class, 'downloadRequisitionPdf'])->name('requisitions.pdf');
         
     });
 });

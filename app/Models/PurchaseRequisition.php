@@ -5,29 +5,32 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Boq;
-use App\Models\BoqMaterial;
-use App\Models\User; // Assuming 'User' model for the initiator
+use App\Models\PurchaseRequisitionItem; // NEW: Import the line item model
+use App\Models\User; 
 
 class PurchaseRequisition extends Model
 {
     use HasFactory;
 
-    // The table name is typically pluralized, but explicitly define it for clarity
     protected $table = 'purchase_requisitions';
 
     protected $fillable = [
-        'user_id',             // Initiator (Site Manager/PM)
-        'boq_id',          // The overall BoQ/Project the PR is for
-        'boq_material_id',     // The specific BoQ item being requested
-        'qty_requested',
+        'user_id',              // Initiator (Site Manager/PM)
+        'boq_id',               // The overall BoQ/Project the PR is for
+        
+        // REMOVED: 'boq_material_id' and 'qty_requested' (Now in PurchaseRequisitionItem)
+        
         'required_by_date',
         'justification',
-        'category',            // e.g., Material, Tooling, Service
+        'category',             // e.g., Material, Tooling, Service (If you still use this on the header)
+        
+        // NEW: Field added to hold the calculated total cost of all line items
+        'cost_estimate',
         
         // Workflow fields
-        'status',              // e.g., Pending, Approved, Rejected, Procurement
-        'current_stage',       // 1 (Site Manager), 2 (Office PM), 3 (Procurement)
-        'approval_notes',      // Notes from the Office PM/Approver
+        'status',               
+        'current_stage',        
+        'approval_notes',       
     ];
 
     protected $casts = [
@@ -52,10 +55,30 @@ class PurchaseRequisition extends Model
         return $this->belongsTo(Boq::class, 'boq_id');
     }
 
+    // REMOVED: public function material() (It no longer links to a single material)
+
     /**
-     * The specific material item requested from the BoQ.
+     * NEW RELATIONSHIP: The multiple line items attached to this requisition.
      */
-    public function material()
+    public function items()
+    {
+        return $this->hasMany(PurchaseRequisitionItem::class, 'purchase_requisition_id');
+    }
+    
+    /**
+     * Helper method to determine the role responsible for the current approval stage.
+     */
+    public function currentApproverRole(): string
+    {
+        $stages = [
+            1 => 'Quantity Surveyor',
+            2 => 'Office Project Manager',
+            3 => 'Procurement/Finance Officer',
+        ];
+
+        return $stages[$this->current_stage] ?? 'Unknown Approver (Stage ' . $this->current_stage . ')';
+    }
+     public function material()
     {
         return $this->belongsTo(BoqMaterial::class, 'boq_material_id');
     }

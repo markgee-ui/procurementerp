@@ -17,11 +17,11 @@ class BoqActivity extends Model
 
     public function boq()
     {
-        return $this->belongsTo(Boq::class);
+        return $this->belongsTo(Boq::class,'boq_id');
     }
 
     public function materials()
     {
-        return $this->hasMany(BoqMaterial::class);
+        return $this->hasMany(BoqMaterial::class,'boq_activity_id');
     }
 }

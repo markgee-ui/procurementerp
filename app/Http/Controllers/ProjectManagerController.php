@@ -8,6 +8,9 @@ use App\Models\PurchaseRequisition; // Primary Model
 use App\Models\BoqMaterial; // Used to fetch material details for PR creation
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\View;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\PurchaseRequisitionItem; // For line items
 
 class ProjectManagerController extends Controller
 {
@@ -73,31 +76,34 @@ class ProjectManagerController extends Controller
      * * @param PurchaseRequisition $requisition
      * @return \Illuminate\View\View
      */
-    public function showRequisition(PurchaseRequisition $requisition)
-    {
-        // Eager load necessary relationships for the show blade
-        $requisition->load('user', 'boq', 'boqMaterial');
+   public function showRequisition(PurchaseRequisition $requisition)
+{
+    // Eager load necessary relationships for the show blade
+    // CHANGE 'user' to 'initiator'
+    $requisition->load('initiator', 'project', 'material');
 
-        return view('pm.requisitions.show', [
-            'requisition' => $requisition,
-        ]);
-    }
+    return view('pm.requisitions.show', [
+        'requisition' => $requisition,
+    ]);
+}
 
     /**
      * Show the form for creating a new Purchase Requisition (PR).
      * * @param Boq $boq (Using route model binding for the BoQ)
      * @return \Illuminate\View\View
      */
-    public function createRequisition(Boq $boq)
-    {
-        // Load the BoQ materials grouped by activity
-        $activities = $boq->activities()->with('materials')->get();
-        
-        return view('pm.requisitions.create', [
-            'boq' => $boq,
-            'activities' => $activities,
-        ]);
-    }
+    public function createRequisition(Boq $project) // <-- CHANGE HERE
+{
+    // Load the BoQ materials grouped by activity
+    // Use $project for the relationship
+    $activities = $project->activities()->with('materials')->get();
+    
+    // Crucially, pass it to the view using the EXPECTED variable name ($boq)
+    return view('pm.requisitions.create', [
+        'boq' => $project, // Pass $project as $boq to satisfy the view logic
+        'activities' => $activities,
+    ]);
+}
     
     /**
      * Store a newly created Purchase Requisition in storage.
@@ -105,76 +111,77 @@ class ProjectManagerController extends Controller
      * * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function storeRequisition(Request $request)
-    {
-        // 1. Validation (Ensures all necessary fields are present and exist)
-        $data = $request->validate([
-            'boq_id'           => 'required|exists:boqs,id',           // The project/budget header ID
-            'boq_material_id'  => 'required|exists:boq_materials,id',  // The specific material line item
-            'qty_requested'    => 'required|numeric|min:0.01',         // The quantity requested
-            'justification'    => 'required|string',                     // A reason for the request
-            'required_by_date' => 'nullable|date',                      // Added as per migration update
-        ]);
+public function storeRequisition(Request $request)
+{
+    // 1. Validation for Main PR and Line Items
+    // Validation is now correctly checking the 'boqs' table for the header ID.
+    $data = $request->validate([
+        // Main PR Details (Header)
+        'boq_id'           => 'required|exists:boqs,id', // FIXED: Now requires 'boq_id' and validates against 'boqs' table
+        'justification'    => 'required|string',
+        'required_by_date' => 'nullable|date',
 
-        $qtyRequested = $data['qty_requested'];
+        // Dynamic Line Items (Must be an array, must have at least one item)
+        'items'            => 'required|array|min:1',
+        // Validation for each item in the array
+        'items.*.boq_material_id' => 'required|exists:boq_materials,id', 
+        'items.*.boq_activity_id' => 'required|exists:boq_activities,id',
+        'items.*.qty_requested'   => 'required|numeric|min:0.01',
+    ]);
 
-        // 2. Retrieve BoQ Material details for consistent record creation
+    // 2. Create the Parent Purchase Requisition Record (Header)
+    $requisition = PurchaseRequisition::create([
+        'user_id'          => Auth::id(),
+        'boq_id'           => $data['boq_id'], // Using boq_id
+        'justification'    => $data['justification'],
+        'required_by_date' => $data['required_by_date'] ?? null,
+        'status'           => 'Pending',
+        'current_stage'    => 1,
+    ]);
+
+    // 3. Process and Create Line Items
+    $totalEstimatedCost = 0;
+    $itemsToCreate = [];
+
+    foreach ($data['items'] as $itemData) {
+        $boqMaterialId = $itemData['boq_material_id'];
+        $qtyRequested = $itemData['qty_requested'];
+        
         try {
-            // Find the BoQ Material line to extract item name, unit, and rate
-            $boqMaterial = BoqMaterial::findOrFail($data['boq_material_id']);
+            $boqMaterial = BoqMaterial::findOrFail($boqMaterialId);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            throw ValidationException::withMessages(['boq_material_id' => 'The selected material line is invalid or not found.']);
+            // Rollback the parent PR if any line item is invalid
+            $requisition->delete(); 
+            throw ValidationException::withMessages(['items' => 'One or more selected materials are invalid or not found.']);
         }
 
-        // 3. Create the PR record
-        $requisition = PurchaseRequisition::create([
-            'user_id'           => Auth::id(),
-            'boq_id'            => $data['boq_id'],
-            'boq_material_id'   => $boqMaterial->id,
-            
-            // Populate item details from the BoQ Material line
-            'item_name'         => $boqMaterial->item,
-            'unit'              => $boqMaterial->unit,
-            'qty_requested'     => $qtyRequested,
-            'required_by_date'  => $data['required_by_date'] ?? null,
-            'justification'     => $data['justification'],
-            'cost_estimate'     => $boqMaterial->rate * $qtyRequested, // Calculate estimated cost
-            
-            // Set initial approval status
-            'status'            => 'Pending',
-            'current_stage'     => 1, // Ready for Office PM approval
-        ]);
+        $estimatedCost = $boqMaterial->rate * $qtyRequested;
+        $totalEstimatedCost += $estimatedCost;
 
-        // 4. Success Response
-        return redirect()->route('pm.requisitions.show', $requisition)
-                         ->with('success', 'Purchase Requisition submitted for approval!');
-    }
-/**
- * Show the form for editing the specified Purchase Requisition.
- * @param PurchaseRequisition $requisition
- * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
- */
-public function editRequisition(PurchaseRequisition $requisition)
-{
-    // You should use an authorization check here (e.g., $this->authorize('update', $requisition))
-    
-    // Only allow editing if the PR is still pending.
-    if ($requisition->status !== 'Pending') {
-        return redirect()->route('pm.requisitions.show', $requisition)
-                         ->with('error', 'Only Pending requisitions can be edited.');
+        $itemsToCreate[] = [
+            'purchase_requisition_id' => $requisition->id,
+            'boq_material_id'         => $boqMaterial->id,
+            'boq_activity_id'         => $itemData['boq_activity_id'],
+            'item_name'               => $boqMaterial->item,
+            'unit'                    => $boqMaterial->unit,
+            'qty_requested'           => $qtyRequested,
+            'unit_cost'               => $boqMaterial->rate,
+            'cost_estimate'           => $estimatedCost,
+            'created_at'              => now(),
+            'updated_at'              => now(),
+        ];
     }
     
-    // Load BoQ details if needed for dynamic forms
-    $boq = $requisition->boq;
-    $activities = $boq->activities()->with('materials')->get();
-    
-    return view('pm.requisitions.edit', [
-        'requisition' => $requisition,
-        'boq' => $boq,
-        'activities' => $activities,
-    ]);
+    // 4. Bulk Insert Line Items
+    PurchaseRequisitionItem::insert($itemsToCreate);
+
+    // 5. Update Parent PR with Total Cost (Requires a 'cost_estimate' column on PurchaseRequisition)
+    $requisition->update(['cost_estimate' => $totalEstimatedCost]);
+
+    // 6. Success Response
+    return redirect()->route('pm.requisitions.show', $requisition)
+                     ->with('success', 'Combined Purchase Requisition submitted with ' . count($data['items']) . ' items for approval!');
 }
-
 /**
  * Update the specified Purchase Requisition in storage.
  * @param \Illuminate\Http\Request $request
@@ -183,27 +190,27 @@ public function editRequisition(PurchaseRequisition $requisition)
  */
 public function updateRequisition(Request $request, PurchaseRequisition $requisition)
 {
-    // $this->authorize('update', $requisition);
-    
+    // 1. Authorization & Status Check (Crucial)
+    // $this->authorize('update', $requisition); 
+
     if ($requisition->status !== 'Pending') {
-        return back()->with('error', 'Cannot update a requisition that is not Pending.');
+        return redirect()->route('pm.requisitions.show', $requisition)
+                         ->with('error', 'Requisition is no longer Pending and cannot be updated.');
     }
-    
-    $data = $request->validate([
-        'qty_requested'    => 'required|numeric|min:0.01',
-        'justification'    => 'required|string',
-        'required_by_date' => 'nullable|date',
-        // Note: Changing boq_material_id/boq_id is complex, so we usually restrict those.
+
+    // 2. Validation
+    $validated = $request->validate([
+        'qty_requested' => 'required|numeric|min:0.01',
+        'required_by_date' => 'nullable|date|after_or_equal:today',
+        'justification' => 'required|string|max:500',
     ]);
-    
-    // Re-calculate cost estimate if quantity changed
-    $boqMaterial = $requisition->boqMaterial;
-    $data['cost_estimate'] = $boqMaterial->rate * $data['qty_requested'];
 
-    $requisition->update($data);
+    // 3. Update the Requisition
+    $requisition->update($validated);
 
+    // 4. Redirect
     return redirect()->route('pm.requisitions.show', $requisition)
-                     ->with('success', 'Purchase Requisition updated successfully.');
+                     ->with('success', 'Purchase Requisition #' . $requisition->id . ' updated successfully.');
 }
 
 /**
@@ -273,6 +280,54 @@ public function rejectRequisition(Request $request, PurchaseRequisition $requisi
     return redirect()->route('pm.requisitions.show', $requisition)
                      ->with('error', 'Purchase Requisition has been rejected.');
 }
+    public function downloadRequisitionPdf(PurchaseRequisition $requisition)
+{
+    // Eager load necessary relationships for the PDF view
+    $requisition->load('project', 'material', 'initiator');
+
+    // Render the view to HTML
+    // We will create 'pm.requisitions.pdf_template' next
+    $html = View::make('pm.requisitions.pdf_template', [
+        'requisition' => $requisition,
+    ])->render();
+
+    // Generate and Stream the PDF
+    $pdf = PDF::loadHtml($html);
+
+    // Set paper size and orientation if needed (e.g., A4 portrait)
+    $pdf->setPaper('A4', 'portrait');
+
+    // Download the PDF with a specific filename
+    return $pdf->download('PR_' . $requisition->id . '_' . now()->format('Ymd') . '.pdf');
+}
+// app/Http/Controllers/ProjectManagerController.php
+
+// ... other methods (index, create, store, show) ...
+
+/**
+ * Show the form for editing the specified purchase requisition.
+ * * @param  \App\Models\Requisition  $requisition
+ * @return \Illuminate\View\View
+ */
+public function editRequisition(PurchaseRequisition $requisition)
+{
+    // The Route Model Binding automatically fetches the Requisition based on the route parameter.
+    // We eager load the 'items' relationship for efficient access in the form.
+    $requisition->load('items');
+
+    // Add authorization check (optional but recommended)
+    // $this->authorize('update', $requisition); 
     
-    // Add other workflow methods (approve, reject, edit, destroy) here as needed...
+    // Assuming you have an 'edit' view under 'pm/requisitions'
+    return view('pm.requisitions.edit', [
+        'requisition' => $requisition,
+        // You might need to pass lists of available projects, materials, etc., here too
+        // 'projects' => Project::all(), 
+    ]);
+}
+
+// ... other methods (update, destroy) ...
+    
+
+// Add other workflow methods (approve, reject, edit, destroy) here as needed...
 }

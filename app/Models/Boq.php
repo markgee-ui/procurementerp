@@ -17,6 +17,6 @@ class Boq extends Model
 
     public function activities()
     {
-        return $this->hasMany(BoqActivity::class);
+        return $this->hasMany(BoqActivity::class,'boq_id');
     }
 }

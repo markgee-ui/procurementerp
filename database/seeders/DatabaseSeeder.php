@@ -19,7 +19,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             // Call your new user seeder here
-            ProcurementUserSeeder::class, 
+            // ProcurementUserSeeder::class, 
+            BoqTestSeeder::class,
             
             // Add other seeders here if they exist
             // Example: SupplierSeeder::class,

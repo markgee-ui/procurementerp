@@ -8,8 +8,7 @@
             Purchase Requisitions List
         </h1>
         
-        {{-- Button for adding a new Requisition --}}
-        {{-- Route assumes you are using 'pm' prefix for Project Management routes --}}
+        {{-- Button for adding a new Requisition (Assuming this route is available) --}}
         
     </div>
 
@@ -17,7 +16,7 @@
     <div class="mb-6 p-4 bg-gray-50 rounded-lg shadow-inner">
         <form action="{{ route('pm.requisitions.index') }}" method="GET" class="space-y-4 md:space-y-0 md:flex md:space-x-4 items-center">
             
-            {{-- Search by Item Name --}}
+            {{-- Search by Item Name (Controller must search through the 'items' relationship) --}}
             <input type="text" name="item_search" placeholder="Search by Item Name" 
                     value="{{ request('item_search') }}"
                     class="w-full md:w-1/3 p-2 border border-gray-300 rounded-md">
@@ -33,15 +32,7 @@
             </select>
             
             {{-- Optional: Filter by Project/BoQ --}}
-            {{-- This assumes you pass a list of $boqs to the view for the dropdown --}}
-            {{-- <select name="boq_id" class="w-full md:w-1/4 p-2 border border-gray-300 rounded-md">
-                <option value="">Filter by Project/BoQ</option>
-                @foreach ($boqs as $boq)
-                    <option value="{{ $boq->id }}" {{ request('boq_id') == $boq->id ? 'selected' : '' }}>
-                        {{ $boq->project_name }} (ID: {{ $boq->id }})
-                    </option>
-                @endforeach
-            </select> --}}
+            {{-- Leaving this commented out as no $boqs variable is provided --}}
             
             <button type="submit" class="w-full md:w-auto px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600">
                 Apply Filters
@@ -64,9 +55,10 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">ID / Project</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Item Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Qty / Unit</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Status</th>
+                        {{-- UPDATED: Show consolidated Item Count and Total Cost --}}
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Line Items / Est. Cost</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Initiator</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Status / Stage</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Date Submitted</th>
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -76,14 +68,18 @@
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200">
                             #{{ $requisition->id }} <br>
-                            <span class="text-xs text-gray-500">BoQ #{{ $requisition->boq->id ?? 'N/A' }}</span>
+                            <span class="text-xs text-gray-500">{{ $requisition->project->project_name ?? 'N/A' }}</span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200">
-                            {{ $requisition->item_name }}
-                        </td>
+                        
+                        {{-- UPDATED CELL: Displaying item count and total cost --}}
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                            {{ number_format($requisition->qty_requested, 2) }} {{ $requisition->unit }}
+                            <span class="font-semibold text-indigo-600">{{ $requisition->items->count() }}</span> Items<br>
+                            <span class="text-xs text-green-600">KES{{ number_format($requisition->cost_estimate ?? 0, 2) }} (Est.)</span>
                         </td>
+                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                            {{ $requisition->initiator->name ?? 'System' }}
+                        </td>
+
                         <td class="px-6 py-4 whitespace-nowrap text-sm border-r border-gray-200">
                             @php
                                 $statusColor = match ($requisition->status) {
@@ -97,6 +93,7 @@
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusColor }}">
                                 {{ $requisition->status }}
                             </span>
+                            <span class="text-xs text-gray-500 block mt-1">Stage {{ $requisition->current_stage }}</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
                             {{ $requisition->created_at->format('Y-m-d') }}
