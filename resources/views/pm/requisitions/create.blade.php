@@ -28,7 +28,7 @@
     <form action="{{ route('pm.requisitions.store') }}" method="POST" id="requisition-form">
         @csrf
         {{-- Using project_id as per the controller update --}}
-        <input type="hidden" name="project_id" value="{{ $project->id }}">
+        <input type="hidden" name="boq_id" value="{{ $boq->id }}">
 
         {{-- 1. LINE ITEM INPUT AREA (Always visible) --}}
         <div class="bg-gray-100 p-4 rounded-md mb-6 border-2 border-dashed border-gray-300">

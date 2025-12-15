@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Supplier;
 use App\Models\Product;
 use App\Models\PurchaseOrder; 
+use App\Models\PurchaseRequisition;
 use App\Models\PurchaseOrderItem; 
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -628,5 +629,117 @@ public function downloadPurchaseOrder(PurchaseOrder $purchaseOrder)
 
     return $pdf->download('PO-' . $safeOrderNumber . '.pdf');
 }
+public function requisitionsIndex(Request $request)
+{
+    // Define the stages required for final procurement action (e.g., QS=1, OPM=2)
+    $requiredApprovals = [1, 2]; 
+    $requiredCount = count($requiredApprovals);
+
+    // --- 1. BUILD THE ID FILTER SUBQUERY ---
+    // This query finds the IDs of requisitions that meet the complex approval criteria.
+    $requisitionIds = DB::table('purchase_requisitions')
+        ->join('approvals as a', 'a.purchase_requisition_id', '=', 'purchase_requisitions.id')
+        
+        // Filter only for successful approvals
+        ->where('a.status', 'approved')
+        
+        // Filter by the required stages
+        ->whereIn('a.stage', $requiredApprovals)
+        
+        // Exclude requisitions that are already processed (optional, but good practice)
+        ->whereNotIn('purchase_requisitions.status', ['Processed', 'Completed'])
+        
+        // Group by ID to count the distinct approvals received
+        ->groupBy('purchase_requisitions.id')
+        
+        // Filter to ensure all required approvals are present (COUNT = 2)
+        ->havingRaw('COUNT(DISTINCT a.stage) = ?', [$requiredCount])
+        
+        // *** CRITICAL FIX: Only select the ID to satisfy ONLY_FULL_GROUP_BY ***
+        ->select('purchase_requisitions.id');
+
+    
+    // --- 2. EXECUTE THE MAIN PAGINATED QUERY ---
+    // Select the full model data based on the filtered IDs.
+    $query = PurchaseRequisition::with('approvals')
+        ->whereIn('id', $requisitionIds)
+        // Add sorting and filtering directly to the main query
+        ->orderBy('created_at', 'desc');
+
+    // Optional: Implement filtering by project/site, date, etc. here using $request
+    // E.g. ->when($request->project_id, fn($q, $id) => $q->where('project_id', $id))
+
+    $requisitions = $query->paginate(15)->withQueryString();
+
+    return view('procurement.requisition.index', compact('requisitions'));
+}
+
+    // --- NEW: View Approved Requisition to Initiate PO ---
+    /**
+     * Show an approved Purchase Requisition and provide options to act upon it.
+     */
+   public function requisitionAction(PurchaseRequisition $requisition)
+{
+    // Eager load necessary relationships
+    $requisition->load(
+        'project',
+        'initiator', 
+        'items.boqMaterial.suppliers', // <-- Eager load the supplier data for each item/material
+        'approvals.user'
+    );
+
+    // Fetch all suppliers (we still need this for initial load and non-item based selection)
+    $suppliers = Supplier::orderBy('name')->get(['id', 'name']);
+    
+    // --- NEW: Generate the Item-to-Supplier Map ---
+    $itemSupplierMap = [];
+    foreach ($requisition->items as $item) {
+        // Use the ID of the boqMaterial (product) to link suppliers
+        $materialId = $item->boqMaterial->id ?? null;
+        
+        if ($materialId && $item->boqMaterial->suppliers) {
+            $itemSupplierMap[$item->id] = $item->boqMaterial->suppliers->pluck('id')->toArray();
+        }
+    }
+    
+    // Pass the map to the view
+    return view('procurement.requisition.action', compact('requisition', 'suppliers', 'itemSupplierMap'));
+}
+
+    // --- NEW: Linking or Creating PO from Requisition ---
+    // (This method is complex and often handled by a dedicated service or a multi-step form, 
+    // but for now, let's keep it simple as a redirect/link)
+    
+    /**
+     * Handles the initiation of a PO based on the Requisition.
+     * This method will likely redirect to the PO creation form, pre-filling data.
+     */
+    public function initiatePurchaseOrder(PurchaseRequisition $requisition, Request $request): RedirectResponse
+    {
+        // 1. You could link to an existing PO, but typically you create a new one.
+        
+        // 2. The most common flow: Redirect to the PO creation page, pre-selecting a supplier
+        //    (If the user selected a preferred supplier, or if the system auto-suggests one)
+
+        $request->validate([
+            'preferred_supplier_id' => 'nullable|exists:suppliers,id', // Optional field from the action view
+        ]);
+
+        $supplierId = $request->preferred_supplier_id;
+
+        if ($supplierId) {
+            $supplier = Supplier::find($supplierId);
+            // Redirect to the PO creation route, passing the supplier and the requisition ID
+            return redirect()->route('procurement.order.create', [
+                'supplier' => $supplier->id, 
+                'requisition_id' => $requisition->id
+            ])->with('info', 'PO creation started. Items from Requisition #' . $requisition->id . ' can be imported.');
+        }
+
+        // If no preferred supplier, redirect to the supplier selection page
+        return redirect()->route('procurement.order.create.select_supplier')
+            ->with('info', 'Please select a supplier to begin processing Requisition #' . $requisition->id . '.')
+            ->with('requisition_id', $requisition->id); // Pass the PR ID via session flash for later use
+    }
 
 }

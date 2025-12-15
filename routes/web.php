@@ -5,6 +5,7 @@ use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\QuantitySurveyorController;
 use App\Http\Controllers\ProjectManagerController;
+use App\Http\Controllers\OfficeProjectManagerController;
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes (Public)
@@ -51,6 +52,10 @@ Route::middleware('auth')->group(function () {
         Route::put('/orders/{purchaseOrder}', [ProcurementController::class, 'updatePurchaseOrder'])->name('order.update');
         Route::delete('/orders/{purchaseOrder}', [ProcurementController::class, 'destroyPurchaseOrder'])->name('order.destroy');
         Route::get('/order/download/{purchaseOrder}', [ProcurementController::class, 'downloadPurchaseOrder'])->name('order.download');
+        Route::get('/requisitions', [ProcurementController::class, 'requisitionsIndex'])->name('requisition.index');
+    Route::get('/requisitions/{requisition}', [ProcurementController::class, 'requisitionAction'])->name('requisition.action');
+    Route::post('/requisitions/{requisition}/initiate-po', [ProcurementController::class, 'initiatePurchaseOrder'])->name('requisition.initiate_po');
+    
     });
 
      // In routes/web.php
@@ -81,6 +86,16 @@ Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
     // Delete BoQ
     Route::delete('/boq/{boq}', [QuantitySurveyorController::class, 'destroyBoq'])->name('boq.destroy'); 
     Route::get('/boq/{boq}/download', [QuantitySurveyorController::class, 'downloadBoq'])->name('boq.download');
+    Route::get('requisitions', [QuantitySurveyorController::class, 'indexRequisitions'])->name('requisitions.index');
+    
+    // 2. Show a specific PR (to review details before approving/rejecting)
+    Route::get('requisitions/{requisition}', [QuantitySurveyorController::class, 'showRequisition'])->name('requisitions.show');
+    
+    // 3. ACTION: Approve the PR (Moves to Stage 2: Office PM)
+    Route::post('requisitions/{requisition}/approve', [QuantitySurveyorController::class, 'approveRequisition'])->name('requisitions.approve');
+    
+    // 4. ACTION: Reject the PR (Requires rejection notes)
+    Route::post('requisitions/{requisition}/reject', [QuantitySurveyorController::class, 'rejectRequisition'])->name('requisitions.reject');
 });
     Route::prefix('pm')->name('pm.')->middleware('role:pm')->group(function () {
         Route::get('/', [ProjectManagerController::class, 'index'])->name('index');
@@ -93,6 +108,24 @@ Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
         Route::delete('requisitions/{requisition}', [ProjectManagerController::class, 'destroyRequisition'])->name('requisitions.destroy');
         Route::get('requisitions/{requisition}/pdf', [ProjectManagerController::class, 'downloadRequisitionPdf'])->name('requisitions.pdf');
         
+    });
+    Route::prefix('opm')->name('opm.')->middleware('role:offpm')->group(function () {
+        
+        // OPM Dashboard
+        Route::get('/', [OfficeProjectManagerController::class, 'index'])->name('index'); 
+
+        // --- PR APPROVAL Routes (Stage 2: OPM) ---
+        // 1. Index of PRs awaiting OPM approval (Stage 2)
+        Route::get('requisitions', [OfficeProjectManagerController::class, 'indexRequisitions'])->name('requisitions.index');
+        
+        // 2. Show a specific PR (to review details before approving/rejecting)
+        Route::get('requisitions/{requisition}', [OfficeProjectManagerController::class, 'showRequisition'])->name('requisitions.show');
+        
+        // 3. ACTION: Approve the PR (Moves to Stage 3: Procurement/Final)
+        Route::post('requisitions/{requisition}/approve', [OfficeProjectManagerController::class, 'approveRequisition'])->name('requisitions.approve');
+        
+        // 4. ACTION: Reject the PR (Requires rejection notes)
+        Route::post('requisitions/{requisition}/reject', [OfficeProjectManagerController::class, 'rejectRequisition'])->name('requisitions.reject');
     });
 });
 

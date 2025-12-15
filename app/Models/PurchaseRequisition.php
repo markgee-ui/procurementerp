@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\Boq;
 use App\Models\PurchaseRequisitionItem; // NEW: Import the line item model
 use App\Models\User; 
+use App\Models\Approval;
 
 class PurchaseRequisition extends Model
 {
@@ -73,7 +74,7 @@ class PurchaseRequisition extends Model
         $stages = [
             1 => 'Quantity Surveyor',
             2 => 'Office Project Manager',
-            3 => 'Procurement/Finance Officer',
+            3 => 'Procurement Officer',
         ];
 
         return $stages[$this->current_stage] ?? 'Unknown Approver (Stage ' . $this->current_stage . ')';
@@ -81,5 +82,11 @@ class PurchaseRequisition extends Model
      public function material()
     {
         return $this->belongsTo(BoqMaterial::class, 'boq_material_id');
+    }
+
+    public function approvals()
+    {
+        // Assuming your Approval model is named 'Approval' and has a foreign key 'purchase_requisition_id'
+        return $this->hasMany(Approval::class, 'purchase_requisition_id');
     }
 }

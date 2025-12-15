@@ -41,7 +41,7 @@ public function login(Request $request)
         $user = Auth::user();
         
         //  NEW: Define allowed roles
-        $allowedRoles = ['procurement', 'qs','pm']; 
+        $allowedRoles = ['procurement', 'qs','pm','offpm']; 
 
         // Check role authorization
         if (!in_array($user->role, $allowedRoles)) {
@@ -64,6 +64,9 @@ public function login(Request $request)
             $message = 'Welcome back, Quality & Standards Officer!';
         } elseif ($user->role === 'pm') {
             $intendedRoute = route('pm.index'); 
+            $message = 'Welcome back, Project Manager!';
+            } elseif ($user->role === 'offpm') {
+            $intendedRoute = route('opm.index'); 
             $message = 'Welcome back, Project Manager!';
         } else {
             // Fallback for an authorized but unexpected role

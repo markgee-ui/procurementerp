@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Boq;
+use App\Models\PurchaseRequisition;
+use App\Models\Approval;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Validation\Rule; // Added for validation
+use Illuminate\Support\Facades\Auth;
 
 class QuantitySurveyorController extends Controller
 {
@@ -277,4 +280,108 @@ class QuantitySurveyorController extends Controller
 
         return $pdf->download($filename);
     }
+
+/**
+     * Display a list of Purchase Requisitions awaiting QS approval (Stage 1).
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function indexRequisitions(Request $request)
+    {
+        $query = PurchaseRequisition::with('initiator', 'project');
+
+        // Only show requisitions that are pending and require QS approval (Stage 1)
+        $query->where('status', 'Pending')
+              ->where('current_stage', 1);
+
+        // Optional filtering/searching based on request parameters
+        if ($request->filled('boq_id')) {
+            $query->where('boq_id', $request->boq_id);
+        }
+        
+        $requisitions = $query->orderBy('created_at', 'asc')->paginate(15);
+        $boqs = Boq::select('id', 'project_name')->get(); // For filter dropdown
+
+        return view('qs.requisitions.index', [
+            'requisitions' => $requisitions,
+            'boqs' => $boqs,
+        ]);
+    }
+
+    /**
+     * Display a specific Purchase Requisition for review.
+     * @param PurchaseRequisition $requisition
+     * @return \Illuminate\View\View
+     */
+    public function showRequisition(PurchaseRequisition $requisition)
+{
+    // Eager load necessary relationships for the show blade.
+    // NOTE: 'items.material' has been corrected to 'items.boqMaterial'
+    $requisition->load('initiator', 'project', 'items.boqMaterial', 'items.boqActivity');
+
+    // Note: The view should use the current_stage property to conditionally
+    // display approval/rejection buttons for the QS if current_stage == 1.
+
+    return view('qs.requisitions.show', [
+        'requisition' => $requisition,
+    ]);
 }
+
+
+    /**
+     * Approves the Purchase Requisition and advances the workflow stage.
+     * QS is Stage 1 -> moves to Stage 2 (Office PM).
+     * @param PurchaseRequisition $requisition
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function approveRequisition(PurchaseRequisition $requisition)
+{
+    // Check for Stage 1 (QS approval)
+    if ($requisition->status !== 'Pending' || $requisition->current_stage !== 1) {
+        return back()->with('error', 'Requisition is not ready for Quantity Surveyor approval.');
+    }
+
+    // --- CRITICAL FIX: CREATE THE APPROVAL RECORD ---
+    Approval::create([
+        'purchase_requisition_id' => $requisition->id,
+        'user_id' => Auth::id(), // ID of the QS who just approved
+        'stage' => 1,            // The stage that was just approved (Stage 1)
+        'status' => 'approved',
+        'notes' => 'Approved by Quantity Surveyor.', // Optional: or grab from request
+    ]);
+    
+    // --- ADVANCE THE REQUISITION ---
+    $requisition->current_stage = 2; // Advance to Stage 2: Office PM
+    
+    $requisition->save();
+    
+    // Redirect to the index or show view, as the PR is no longer Pending for the QS
+    return redirect()->route('qs.requisitions.index')
+                     ->with('success', 'Requisition #' . $requisition->id . ' approved by QS and sent to Office Project Manager.');
+}
+    /**
+     * Rejects the Purchase Requisition (Permanent action).
+     * @param Request $request
+     * @param PurchaseRequisition $requisition
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function rejectRequisition(Request $request, PurchaseRequisition $requisition)
+    {
+        // Check for Stage 1 (QS approval)
+        if ($requisition->status !== 'Pending' || $requisition->current_stage !== 1) {
+            return back()->with('error', 'Cannot reject a requisition that is not currently awaiting QS approval.');
+        }
+
+        $request->validate([
+            'rejection_notes' => 'required|string|max:500', // Mandatory notes for rejection
+        ]);
+
+        $requisition->status = 'Rejected';
+        $requisition->current_stage = 0; // Set to a non-active stage
+        $requisition->approval_notes = $request->rejection_notes;
+        $requisition->save();
+        
+        return redirect()->route('qs.requisitions.index')
+                         ->with('error', 'Purchase Requisition #' . $requisition->id . ' has been rejected.');
+    }
+} 
