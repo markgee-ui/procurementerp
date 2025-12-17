@@ -90,11 +90,24 @@
         const existingBoqData = @json($boq->load('activities.materials'));
         
         const activityOptions = [
-             { value: 'foundation', text: 'Foundation' },
-             { value: 'masonry', text: 'Walling/Masonry' },
-             { value: 'roofing', text: 'Roofing' },
-             { value: 'finishes', text: 'Finishes' },
-             { value: 'services', text: 'Services (Plumbing/Electrical)' },
+            { value: 'Foundation', text: 'Foundation' },
+            { value: 'Masonry', text: 'Masonry' },
+            { value: 'Roofing', text: 'Roofing' },
+            { value: 'Wall Finishes', text: 'Wall Finishes' },
+            { value: 'Floor Finishes', text: 'Floor Finishes' },
+            { value: 'Staircase Railing Touch-Up', text: 'Staircase Railing Touch-Up' },
+            { value: 'Furniture & Fittings', text: 'Furniture & Fittings' },
+            { value: 'Branding Works', text: 'Branding Works' },
+            { value: 'Plumbing', text: 'Plumbing' },
+            { value: 'Foul Drainage', text: 'Foul Drainage' },
+            { value: 'Doors', text: 'Doors' },
+            { value: 'Windows', text: 'Windows' },
+            { value: 'Electrical', text: 'Electrical' },
+            { value: 'Ceiling', text: 'Ceiling' },
+            { value: 'Hvac Installations', text: 'HVAC Installations' },
+            { value: 'Landscaping', text: 'Landscaping' },
+            { value: 'Joinery Works', text: 'Joinery Works' },
+            { value: 'Miscellaneous', text: 'Miscellaneous' },
         ];
         
         const container = document.getElementById('activity-sections-container');

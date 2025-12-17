@@ -45,15 +45,17 @@ class BoqMaterial extends Model
      * $requisition->load('items.boqMaterial.suppliers')
      */
     public function suppliers()
-    {
-        // Path: BoqMaterial -> Product -> Supplier
-        return $this->hasManyThrough(
-            Supplier::class,    // The final model we want
-            Product::class,     // The intermediate model
-            'boq_material_id',  // Foreign key on the intermediate (Product) table
-            'id',               // Key on the final (Supplier) model
-            'id',               // Local key on the BoqMaterial model
-            'supplier_id'       // Key on the intermediate (Product) model that links to Supplier
-        );
-    }
+{
+    // This assumes: 
+    // 1. The 'products' table has 'boq_material_id' and 'supplier_id'
+    // 2. The local key is 'id' (BoqMaterial's ID)
+    // 3. The related model is App\Models\Supplier
+    return $this->belongsToMany(
+        Supplier::class, 
+        'products',           // Intermediate table name is 'products'
+        'boq_material_id',    // Foreign key on products table linking back to BoqMaterial
+        'supplier_id'         // Foreign key on products table linking to Supplier
+    )->distinct(); // Ensure only unique suppliers are returned
+}
+    
 }

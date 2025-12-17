@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\QuantitySurveyorController;
 use App\Http\Controllers\ProjectManagerController;
 use App\Http\Controllers\OfficeProjectManagerController;
+use App\Http\Controllers\ReportController;
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes (Public)
@@ -55,12 +56,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/requisitions', [ProcurementController::class, 'requisitionsIndex'])->name('requisition.index');
     Route::get('/requisitions/{requisition}', [ProcurementController::class, 'requisitionAction'])->name('requisition.action');
     Route::post('/requisitions/{requisition}/initiate-po', [ProcurementController::class, 'initiatePurchaseOrder'])->name('requisition.initiate_po');
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     
     });
 
      // In routes/web.php
 
-Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
+ Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
     
     // QS Dashboard (The original /qs route)
     Route::get('/', [QuantitySurveyorController::class, 'index'])->name('index'); 
@@ -96,7 +98,7 @@ Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
     
     // 4. ACTION: Reject the PR (Requires rejection notes)
     Route::post('requisitions/{requisition}/reject', [QuantitySurveyorController::class, 'rejectRequisition'])->name('requisitions.reject');
-});
+ });
     Route::prefix('pm')->name('pm.')->middleware('role:pm')->group(function () {
         Route::get('/', [ProjectManagerController::class, 'index'])->name('index');
         Route::get('/requisitions/create/{project}', [ProjectManagerController::class, 'createRequisition'])->name('requisitions.create');
@@ -107,6 +109,7 @@ Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
         Route::patch('requisitions/{requisition}', [ProjectManagerController::class, 'updateRequisition'])->name('requisitions.update');
         Route::delete('requisitions/{requisition}', [ProjectManagerController::class, 'destroyRequisition'])->name('requisitions.destroy');
         Route::get('requisitions/{requisition}/pdf', [ProjectManagerController::class, 'downloadRequisitionPdf'])->name('requisitions.pdf');
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         
     });
     Route::prefix('opm')->name('opm.')->middleware('role:offpm')->group(function () {
@@ -126,7 +129,11 @@ Route::prefix('qs')->name('qs.')->middleware('role:qs')->group(function () {
         
         // 4. ACTION: Reject the PR (Requires rejection notes)
         Route::post('requisitions/{requisition}/reject', [OfficeProjectManagerController::class, 'rejectRequisition'])->name('requisitions.reject');
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     });
+    Route::get('/reports/export/{type}', [ReportController::class, 'exportCSV'])
+        ->name('reports.export')
+        ->where('type', 'requisitions|orders');
 });
 
 /*

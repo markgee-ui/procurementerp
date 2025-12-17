@@ -27,9 +27,25 @@ class Supplier extends Model
 
     /**
      * Get the products associated with the supplier.
+     * A Supplier has many specific Product offerings.
      */
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+    
+    /**
+     * Get the BOQ materials this supplier can provide.
+     * This is a Many-to-Many relationship defined through the 'products' table.
+     * * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function boqMaterials()
+    {
+        return $this->belongsToMany(
+            BoqMaterial::class, 
+            'products',           // Intermediate table name
+            'supplier_id',        // Foreign key on intermediate table linking back to Supplier
+            'boq_material_id'     // Foreign key on intermediate table linking to BoqMaterial
+        )->distinct(); // Ensures we get a list of unique materials, not one entry per product.
     }
 }

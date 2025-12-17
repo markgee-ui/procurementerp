@@ -10,7 +10,7 @@
             <h3 class="text-xl font-bold mb-4 border-b pb-2">Requisition Details</h3>
             
             {{-- FIX: Null safety for project name, initiator name, and date format --}}
-            <p><strong>Project:</strong> {{ $requisition->project->name ?? 'N/A' }}</p>
+            <p><strong>Project:</strong> {{ $requisition->project->project_name ?? 'N/A' }}</p>
             <p><strong>Site PM:</strong> {{ $requisition->initiator?->name ?? 'User Missing' }}</p>
             <p><strong>Required On:</strong> {{ $requisition->required_by_date?->format('M d, Y') ?? 'Date Not Specified' }}</p>
 

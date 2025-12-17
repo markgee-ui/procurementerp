@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use App\Models\Product;
 use App\Models\PurchaseOrder; 
 use App\Models\PurchaseRequisition;
+use App\Models\BoqMaterial;
 use App\Models\PurchaseOrderItem; 
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -21,7 +22,13 @@ class ProcurementController extends Controller
      */
     public function create()
     {
-        return view('procurement.create');
+        // 1. Fetch all existing internal material specifications (BoqMaterial).
+        // Select only the necessary columns (id, item, specs) for efficiency.
+        $boqMaterials = BoqMaterial::orderBy('item')
+                                     ->get(['id', 'item', 'specs', 'unit']);
+
+        // 2. Pass the data to the view.
+        return view('procurement.create', compact('boqMaterials'));
     }
 
      public function supplierIndex(Request $request) // <-- MODIFIED: Accepts Request for filtering
@@ -193,22 +200,22 @@ class ProcurementController extends Controller
     /**
      * Store procurement data into the database
      */
-        public function store(Request $request)
+      public function store(Request $request)
 {
     // 1. VALIDATION
     $request->validate([
-        'supplier_name' => 'required|string|max:255',
-        'location'      => 'required|string|max:255',
-        'address'       => 'required|string|max:500',
-        'contact'       => 'required|string|max:255',
-        'products_data' => 'required|json',
-        'kra_pin'               => 'nullable|string|max:255',
-        'sales_person_contact'  => 'nullable|string|max:255',
-        'shop_photo'            => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Max 2MB       
-        'account_number'        => 'nullable|string|max:255',
-        'bank_name'             => 'nullable|string|max:255',
-        'paybill_number'        => 'nullable|string|max:255',
-        'till_number'           => 'nullable|string|max:255',
+        'supplier_name'          => 'required|string|max:255',
+        'location'               => 'required|string|max:255',
+        'address'                => 'required|string|max:500',
+        'contact'                => 'required|string|max:255',
+        'products_data'          => 'required|json',
+        'kra_pin'                => 'nullable|string|max:255',
+        'sales_person_contact'   => 'nullable|string|max:255',
+        'shop_photo'             => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        'account_number'         => 'nullable|string|max:255',
+        'bank_name'              => 'nullable|string|max:255',
+        'paybill_number'         => 'nullable|string|max:255',
+        'till_number'            => 'nullable|string|max:255',
     ]);
 
     try {
@@ -219,11 +226,11 @@ class ProcurementController extends Controller
             return back()->with('error', 'Invalid product data format.')->withInput();
         }
 
-        // 3. FILE UPLOAD HANDLING (NEW STEP)
+        // 3. FILE UPLOAD HANDLING
         $shopPhotoPath = null;
         if ($request->hasFile('shop_photo')) {
-            // Store the file in the 'public/supplier-photos' directory
-            $shopPhotoPath = $request->file('shop_photo')->store('supplier-photos', 'public');
+            $shopPhotoPath = $request->file('shop_photo')
+                ->store('supplier-photos', 'public');
         }
 
         // 4. SAVE SUPPLIER
@@ -234,48 +241,91 @@ class ProcurementController extends Controller
             'contact'               => $request->contact,
             'kra_pin'               => $request->kra_pin,
             'sales_person_contact'  => $request->sales_person_contact,
-            'shop_photo_path'       => $shopPhotoPath, 
-            
+            'shop_photo_path'       => $shopPhotoPath,
             'account_number'        => $request->account_number,
             'bank_name'             => $request->bank_name,
             'paybill_number'        => $request->paybill_number,
             'till_number'           => $request->till_number,
         ]);
 
-        // 5. SAVE EACH PRODUCT
+        // 5. SAVE EACH PRODUCT - UPDATED LOGIC FOR OPTIONAL BOQ_MATERIAL_ID
         foreach ($products as $product) {
+
+            // Determine the BOQ Material ID.
+            // If it exists in the product array, is not null, and is a valid integer (or string representing an integer), use it.
+            // Otherwise, use null.
+            // Note: Client-side JS now passes 'null' or the integer ID.
+            $boqMaterialId = isset($product['boq_material_id']) && $product['boq_material_id'] !== null
+                ? (int)$product['boq_material_id']
+                : null;
+            
+            // Basic data integrity check for required product fields (item/price)
+            if (!isset($product['item']) || !isset($product['unit_price'])) {
+                Log::warning('Skipping product due to missing required fields (item or unit_price) for supplier ID: ' . $supplier->id);
+                continue;
+            }
+
+
             Product::create([
-                'supplier_id' => $supplier->id,
-                'item'        => $product['item'],
-                'description' => $product['description'],
-                'unit_price'  => $product['unit_price'],
-                'unit'        => $product['unit'],
+                'supplier_id'     => $supplier->id,
+                // Use the determined ID (null or integer)
+                'boq_material_id' => $boqMaterialId, 
+                'item'            => $product['item'],
+                'description'     => $product['description'] ?? null,
+                'unit_price'      => $product['unit_price'],
+                'unit'            => $product['unit'] ?? null,
             ]);
         }
 
         // 6. RETURN SUCCESS
         return redirect()
             ->route('procurement.create')
-            ->with('success', 'Supplier and procurement entry saved successfully!');
+            ->with('success', 'Supplier and products saved successfully!');
 
     } catch (\Exception $e) {
-        // Make sure to include the Log facade import at the top: `use Illuminate\Support\Facades\Log;`
-        Log::error("PROCUREMENT SAVE ERROR: " . $e->getMessage());
+
+        Log::error(
+            'PROCUREMENT SAVE ERROR: ' . $e->getMessage() .
+            ' on line ' . $e->getLine()
+        );
 
         return back()
             ->withInput()
-            ->with('error', 'An error occurred while saving the supplier data. Please try again.');
+            ->with(
+                'error',
+                'An error occurred while saving the supplier data. Please ensure all required fields are filled and try again.'
+            );
     }
 }
 
-public function createPurchaseOrder(Supplier $supplier) // Uses Route Model Binding
-    {
-        // Fetch all products associated with this supplier
-        // Assuming products are linked by 'supplier_id'
-        $products = $supplier->products; 
 
-        return view('procurement.purchase_order.create', compact('supplier', 'products'));
+public function createPurchaseOrder(Supplier $supplier, Request $request) // ADD Request here
+{
+    // Fetch all products associated with this supplier
+    $products = $supplier->products; 
+    
+    // 1. FIX: Initialize variables to null so compact() doesn't fail
+    $requisition = null;
+    $requisitionProjectName = null;
+    
+    // Check if the PO creation was initiated from a Requisition
+    if ($request->has('requisition_id')) {
+        $requisitionId = $request->input('requisition_id');
+        
+        // Load the Requisition and eager-load the Project (Boq) relationship
+        $requisition = PurchaseRequisition::with('project')
+                                          ->find($requisitionId);
+                                          
+        // If the requisition exists and has a project, set the project name
+        if ($requisition && $requisition->project) {
+             // Set the project name
+             $requisitionProjectName = $requisition->project->project_name;
+        }
     }
+    
+    // Pass the supplier, products, and the now-initialized (or populated) requisition variables
+    return view('procurement.purchase_order.create', compact('supplier', 'products', 'requisition', 'requisitionProjectName'));
+}
     private function generatePoNumber(): string
     {
         $currentYear = now()->year;
@@ -309,12 +359,15 @@ public function createPurchaseOrder(Supplier $supplier) // Uses Route Model Bind
         return "TGL/{$paddedSequence}";
     }
 
-  public function storePurchaseOrder(Request $request) 
+ public function storePurchaseOrder(Request $request) 
 {
     // 1. Validation
     $request->validate([
         'supplier_id' => 'required|exists:suppliers,id',
-        'project_name' => 'nullable|string|max:255',
+        'requisition_id' => 'nullable|exists:purchase_requisitions,id',
+        // Project name validation is now conditional:
+        // REQUIRED if NOT linking to a requisition
+        'project_name' => 'nullable|string|max:255', 
         'items'       => 'required|array|min:1',
         'items.*.product_id' => 'required|exists:products,id',
         'items.*.quantity'   => 'required|integer|min:0',  
@@ -325,9 +378,36 @@ public function createPurchaseOrder(Supplier $supplier) // Uses Route Model Bind
     try {
         $grandTotal = 0;
         $orderItems = [];
+        $requisition = null;
+        
+        // 2. Determine Project Name Logic
+        $projectName = null;
 
+        if ($request->filled('requisition_id')) {
+            // A. PO is from a Requisition: Automatically fetch project name
+            $requisition = PurchaseRequisition::find($request->requisition_id);
+            if ($requisition && $requisition->project_name) {
+                // Assuming your PurchaseRequisition model has a 'project_name' attribute
+                $projectName = $requisition->project_name; 
+            }
+        }
+        
+        // B. PO is NOT from a Requisition (Manual creation): Use the input field
+        // This is safe because if requisition_id was present, $projectName would be set above.
+        if (!$projectName) {
+            $projectName = $request->project_name;
+        }
+
+        // Final check: If no requisition and no project name provided, throw an error
+        if (!$projectName) {
+             return back()
+                ->withInput()
+                ->with('error', 'Project Name is required for manual Purchase Orders.');
+        }
+        // --- End Project Name Determination ---
+        
         foreach ($request->items as $itemData) {
-
+            // ... (Calculation logic remains the same) ...
             if ($itemData['quantity'] <= 0) {
                 continue;
             }
@@ -360,21 +440,29 @@ public function createPurchaseOrder(Supplier $supplier) // Uses Route Model Bind
 
         $poNumber = $this->generatePoNumber();
 
+        // 3. Create Purchase Order
         $purchaseOrder = PurchaseOrder::create([
             'supplier_id' => $request->supplier_id,
-            'project_name' => $request->project_name,
+            'project_name' => $projectName, // <-- Uses the determined name
+            'purchase_requisition_id' => $request->requisition_id, 
             'total_amount' => $grandTotal,
             'order_date' => now(),
             'status' => 'Draft',
             'order_number' => $poNumber,
         ]);
+        
+        // Optional: Update Requisition status to 'Processed' if linked
+        if ($requisition) {
+            $requisition->update(['status' => 'Processed']);
+        }
 
         $purchaseOrder->items()->createMany($orderItems);
 
+        // 4. Return Success
         return redirect()
             ->route('procurement.order.show', $purchaseOrder)
             ->with('success', 'Purchase Order #' . ($purchaseOrder->order_number ?? $purchaseOrder->id) . 
-                  ' created successfully! Total: ' . number_format($grandTotal, 2));
+                ' created successfully! Total: ' . number_format($grandTotal, 2));
 
     } catch (\Exception $e) {
 
@@ -678,34 +766,36 @@ public function requisitionsIndex(Request $request)
     /**
      * Show an approved Purchase Requisition and provide options to act upon it.
      */
-   public function requisitionAction(PurchaseRequisition $requisition)
+  public function requisitionAction(PurchaseRequisition $requisition)
 {
-    // Eager load necessary relationships
+    // Eager load correctly, utilizing the new relationship
     $requisition->load(
         'project',
         'initiator', 
-        'items.boqMaterial.suppliers', // <-- Eager load the supplier data for each item/material
+        // Loads items -> boqMaterial -> suppliers (via the new belongsToMany relationship)
+        'items.boqMaterial.suppliers', 
         'approvals.user'
     );
 
-    // Fetch all suppliers (we still need this for initial load and non-item based selection)
     $suppliers = Supplier::orderBy('name')->get(['id', 'name']);
     
-    // --- NEW: Generate the Item-to-Supplier Map ---
     $itemSupplierMap = [];
     foreach ($requisition->items as $item) {
-        // Use the ID of the boqMaterial (product) to link suppliers
-        $materialId = $item->boqMaterial->id ?? null;
+        $material = $item->boqMaterial;
         
-        if ($materialId && $item->boqMaterial->suppliers) {
-            $itemSupplierMap[$item->id] = $item->boqMaterial->suppliers->pluck('id')->toArray();
+        // Use null-safe operator or a check to prevent errors
+        if ($material && $material->suppliers) {
+             // Access the suppliers collected via the new relationship
+             $itemSupplierMap[$item->id] = $material->suppliers->pluck('id')->toArray();
+        } else {
+             // If a required material has no suppliers, the entry will be an empty array, 
+             // which is correctly handled by your JS intersection logic.
+             $itemSupplierMap[$item->id] = [];
         }
     }
     
-    // Pass the map to the view
     return view('procurement.requisition.action', compact('requisition', 'suppliers', 'itemSupplierMap'));
 }
-
     // --- NEW: Linking or Creating PO from Requisition ---
     // (This method is complex and often handled by a dedicated service or a multi-step form, 
     // but for now, let's keep it simple as a redirect/link)
@@ -715,31 +805,26 @@ public function requisitionsIndex(Request $request)
      * This method will likely redirect to the PO creation form, pre-filling data.
      */
     public function initiatePurchaseOrder(PurchaseRequisition $requisition, Request $request): RedirectResponse
-    {
-        // 1. You could link to an existing PO, but typically you create a new one.
-        
-        // 2. The most common flow: Redirect to the PO creation page, pre-selecting a supplier
-        //    (If the user selected a preferred supplier, or if the system auto-suggests one)
+{
+    $request->validate([
+        'preferred_supplier_id' => 'nullable|exists:suppliers,id',
+        // NOTE: The selected item IDs should also be validated here if you want to pass them to the PO creation form.
+    ]);
 
-        $request->validate([
-            'preferred_supplier_id' => 'nullable|exists:suppliers,id', // Optional field from the action view
-        ]);
+    $supplierId = $request->preferred_supplier_id;
 
-        $supplierId = $request->preferred_supplier_id;
-
-        if ($supplierId) {
-            $supplier = Supplier::find($supplierId);
-            // Redirect to the PO creation route, passing the supplier and the requisition ID
-            return redirect()->route('procurement.order.create', [
-                'supplier' => $supplier->id, 
-                'requisition_id' => $requisition->id
-            ])->with('info', 'PO creation started. Items from Requisition #' . $requisition->id . ' can be imported.');
-        }
-
-        // If no preferred supplier, redirect to the supplier selection page
-        return redirect()->route('procurement.order.create.select_supplier')
-            ->with('info', 'Please select a supplier to begin processing Requisition #' . $requisition->id . '.')
-            ->with('requisition_id', $requisition->id); // Pass the PR ID via session flash for later use
+    if ($supplierId) {
+        $supplier = Supplier::find($supplierId);
+        // Correctly passes supplier and requisition ID for PO creation
+        return redirect()->route('procurement.order.create', [
+            'supplier' => $supplier->id, 
+            'requisition_id' => $requisition->id
+        ])->with('info', 'PO creation started. Items from Requisition #' . $requisition->id . ' can be imported.');
     }
 
+    // Handles the case where no supplier was selected
+    return redirect()->route('procurement.order.create.select_supplier')
+        ->with('info', 'Please select a supplier to begin processing Requisition #' . $requisition->id . '.')
+        ->with('requisition_id', $requisition->id);
+}
 }

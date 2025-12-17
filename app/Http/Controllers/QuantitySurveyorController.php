@@ -17,9 +17,25 @@ class QuantitySurveyorController extends Controller
      * * @return \Illuminate\View\View|\Illuminate\Http\Response
      */
     public function index()
-    {
-        return view('qs.index');
-    }
+{
+    // 1. Total BoQs created
+    $totalBoqs = Boq::count();
+
+    // 2. Awaiting Procurement:
+    // Logic: PRs that are approved but not yet turned into Purchase Orders 
+    // (Or PRs that have reached the Procurement stage)
+    $awaitingProcurement = PurchaseRequisition::where('status', 'Approved')
+                            ->orWhere('current_stage', 3) 
+                            ->count();
+
+    // 3. Pending Approvals:
+    // Logic: PRs where the current stage matches the QS role (Stage 1)
+    $pendingApprovals = PurchaseRequisition::where('status', 'Pending')
+                        ->where('current_stage', 1)
+                        ->count();
+
+    return view('qs.index', compact('totalBoqs', 'awaitingProcurement', 'pendingApprovals'));
+}
     
     public function indexBoq(Request $request)
     {

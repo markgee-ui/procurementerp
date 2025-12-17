@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Add New Procurement Entry')
+@section('title', 'Add New Supplier & Products')
 
 @push('styles')
 <style>
-    /* These styles are now page-specific */
+    /* ... (Your existing custom styles) ... */
     :root {
         --primary-color: #3b82f6; /* Tailwind blue-500 */
     }
@@ -37,22 +37,15 @@
 
 @section('content')
     <header class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-800">Add New Entry</h1>
-      
+        <h1 class="text-3xl font-bold text-gray-800">Add New Supplier & Products</h1>
     </header>
 
-    <!-- Notification/Message Box -->
     <div id="messageBox" class="hidden p-4 mb-6 rounded-lg font-medium text-white bg-red-500 shadow-md">
-        <!-- Messages will be inserted here -->
-    </div>
+        </div>
 
-    {{-- NOTE ON FILE UPLOADS: For a real photo upload, the form must use enctype="multipart/form-data" 
-        and the Controller must handle file storage. We use a text input (photo_url) here for compatibility
-        with the current form structure, but label it clearly. --}}
     <form id="procurementForm" action="{{ route('procurement.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         @csrf 
 
-        <!-- 1. SUPPLIER DETAILS SECTION (Expanded) -->
         <section class="bg-white p-6 sm:p-8 rounded-xl form-card">
             <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">1. Supplier & Contact Information</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -67,13 +60,13 @@
                     @error('supplier_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror 
                 </div>
 
-                {{-- KRA Pin (New Field) --}}
+                {{-- KRA Pin --}}
                 <div class="col-span-1">
                     <label for="kraPin" class="block text-sm font-medium text-gray-700 mb-1">KRA PIN (TIN)</label>
                     <input type="text" id="kraPin" name="kra_pin"
                            value="{{ old('kra_pin') }}"
                            class="input-field w-full p-3 border rounded-lg text-gray-900 @error('kra_pin') border-red-500 @enderror"
-                          >
+                         >
                     @error('kra_pin') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
 
@@ -97,7 +90,7 @@
                     @error('contact') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
 
-                {{-- Sales Person Contact (New Field) --}}
+                {{-- Sales Person Contact --}}
                 <div class="col-span-1">
                     <label for="salesPersonContact" class="block text-sm font-medium text-gray-700 mb-1">Sales Person Name/Contact</label>
                     <input type="text" id="salesPersonContact" name="sales_person_contact"
@@ -106,34 +99,32 @@
                            >
                     @error('sales_person_contact') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
-                {{-- Shop Photo UPLOAD (Changed from URL) --}}
-<div class="col-span-1">
-    <label for="shop_photo" class="block text-sm font-medium text-gray-700 mb-1">
-        Upload Shop/Hardware Photo <span class="text-red-500"></span>
-    </label>
-    
-    <input 
-        type="file" 
-        id="shop_photo" 
-        name="shop_photo" {{-- IMPORTANT: Changed name to 'shop_photo' to reflect file upload convention --}}
-        accept="image/*" {{-- Restrict file selection to images --}}
-        class="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 
-               focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 
-               file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 
-               hover:file:bg-indigo-100 @error('shop_photo') border-red-500 @enderror"
-    >
-    
-    @error('shop_photo') 
-        <p class="text-red-500 text-xs mt-1">{{ $message }}</p> 
-    @enderror
-    
-    <p class="text-xs text-gray-500 mt-1">
-        Upload the image file directly (Max 2MB).
-        @if (isset($supplier->shop_photo_path))
-            <span class="text-green-600">Current file exists. Uploading a new file will replace it.</span>
-        @endif
-    </p>
-</div>
+                
+                {{-- Shop Photo UPLOAD --}}
+                <div class="col-span-1">
+                    <label for="shop_photo" class="block text-sm font-medium text-gray-700 mb-1">
+                        Upload Shop/Hardware Photo
+                    </label>
+                    
+                    <input 
+                        type="file" 
+                        id="shop_photo" 
+                        name="shop_photo"
+                        accept="image/*"
+                        class="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 
+                                 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 
+                                 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 
+                                 hover:file:bg-indigo-100 @error('shop_photo') border-red-500 @enderror"
+                    >
+                    
+                    @error('shop_photo') 
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p> 
+                    @enderror
+                    
+                    <p class="text-xs text-gray-500 mt-1">
+                        Upload the image file directly (Max 2MB).
+                    </p>
+                </div>
 
                 {{-- Address --}}
                 <div class="col-span-full">
@@ -147,7 +138,6 @@
             </div>
         </section>
 
-        <!-- 2. PAYMENT DETAILS SECTION (New Section) -->
         <section class="bg-white p-6 sm:p-8 rounded-xl form-card">
             <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">2. Payment & Bank Information</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -195,39 +185,65 @@
             </div>
         </section>
 
-        <!-- 3. PRODUCT DETAILS SECTION (DYNAMIC) -->
         <section class="bg-white p-6 sm:p-8 rounded-xl form-card">
             <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">3. Product Details</h2>
             <input type="hidden" name="products_data" id="productsDataInput">
+            
             <div id="productsContainer" class="space-y-4 mb-6">
-                <!-- Initial product row -->
                 <div class="product-row p-4 border border-gray-200 rounded-lg bg-gray-50 product-row-exit">
-                    <div class="grid grid-cols-6 gap-3">
-                        <div class="col-span-6 sm:col-span-2">
-                            <label for="item-0" class="block text-xs font-medium text-gray-600 mb-1">Item <span class="text-red-500">*</span></label>
-                            <input type="text" id="item-0" name="item" required
-                                   class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Product Name">
+                    <div class="grid grid-cols-12 gap-3">
+                        
+                        {{-- CRITICAL CHANGE: BOQ Material Link (REQUIRED REMOVED) --}}
+                        <div class="col-span-12 sm:col-span-4">
+                            {{-- REMOVED <span class="text-red-500">*</span> --}}
+                            <label for="boqMaterialId-0" class="block text-xs font-medium text-gray-600 mb-1">Internal Material Ref.</label>
+                            {{-- REMOVED required --}}
+                            <select id="boqMaterialId-0" name="boqMaterialId" 
+                                     class="input-field w-full p-2 border rounded-md text-sm text-gray-900">
+                                <option value="">-- Select BOQ Item (Optional) --</option>
+                                {{-- @foreach loop populates the initial dropdown --}}
+                                @isset($boqMaterials)
+                                    @foreach ($boqMaterials as $material)
+                                        <option value="{{ $material->id }}">
+                                            {{ $material->item }} ({{ $material->specs }})
+                                        </option>
+                                    @endforeach
+                                @endisset
+                            </select>
                         </div>
-                        <div class="col-span-6 sm:col-span-3">
+
+                        {{-- Supplier Item Name --}}
+                        <div class="col-span-12 sm:col-span-3">
+                            <label for="item-0" class="block text-xs font-medium text-gray-600 mb-1">Supplier Item Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="item-0" name="item" required
+                                     class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Product Name">
+                        </div>
+
+                        {{-- Item Code (Description) --}}
+                        <div class="col-span-12 sm:col-span-2">
                             <label for="description-0" class="block text-xs font-medium text-gray-600 mb-1">Item Code</label>
                             <input type="text" id="description-0" name="description"
-                                   class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Item Code">
-
+                                     class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="SKU/Code">
                         </div>
-                        <div class="col-span-6 sm:col-span-1">
-                    <label for="unit-0" class="block text-xs font-medium text-gray-600 mb-1">Unit</label>
-                    <input type="text" id="unit-0" name="unit"
-                           class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="pcs/kg/l">
-                </div>
-
-                        <div class="col-span-4 sm:col-span-1">
+                        
+                        {{-- Unit Price --}}
+                        <div class="col-span-6 sm:col-span-2">
                             <label for="unitPrice-0" class="block text-xs font-medium text-gray-600 mb-1">Unit Price <span class="text-red-500">*</span></label>
                             <input type="number" id="unitPrice-0" name="unitPrice" required step="0.01" min="0.01"
-                                   class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="0.00">
+                                     class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="0.00">
                         </div>
-                        <div class="col-span-2 sm:col-span-6 sm:text-right flex items-center justify-end sm:justify-end">
+                        
+                        {{-- Unit --}}
+                        <div class="col-span-4 sm:col-span-1">
+                            <label for="unit-0" class="block text-xs font-medium text-gray-600 mb-1">Unit</label>
+                            <input type="text" id="unit-0" name="unit"
+                                     class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="pcs/kg/l">
+                        </div>
+
+                        {{-- Remove Button Placeholder/Area --}}
+                        <div class="col-span-2 sm:col-span-12 sm:text-right flex items-center justify-end sm:justify-end mt-2">
                             <button type="button" onclick="removeProductRow(this)"
-                                    class="hidden text-red-500 hover:text-red-700 text-sm font-medium p-1 rounded-md transition-colors">
+                                     class="hidden text-red-500 hover:text-red-700 text-sm font-medium p-1 rounded-md transition-colors">
                                 Remove
                             </button>
                         </div>
@@ -242,11 +258,10 @@
             </button>
         </section>
 
-        <!-- SUBMIT BUTTON -->
         <div class="pt-4">
             <button type="submit"
                     class="btn-primary w-full md:w-auto px-8 py-3 rounded-xl text-white font-semibold text-lg hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300">
-                Save Procurement Data
+                Save Supplier & Products
             </button>
         </div>
     </form>
@@ -262,6 +277,9 @@
     const messageBox = document.getElementById('messageBox');
     const addProductBtn = document.getElementById('addProductBtn');
     const productsDataInput = document.getElementById('productsDataInput');
+    
+    // Cache the options HTML for the BOQ dropdown from the first row
+    let boqOptions = '';
 
     /**
      * Shows a message in the notification box.
@@ -280,33 +298,56 @@
      */
     function createProductRowHTML() {
         productRowCounter++;
+        // Use the cached options for new rows
+        const optionsHtml = boqOptions || document.getElementById('boqMaterialId-0').innerHTML;
+
         return `
             <div class="product-row p-4 border border-gray-200 rounded-lg bg-gray-50 product-row-exit">
-                <div class="grid grid-cols-6 gap-3">
-                    <div class="col-span-6 sm:col-span-2">
-                        <label for="item-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Item <span class="text-red-500">*</span></label>
-                        <input type="text" id="item-${productRowCounter}" name="item" required
-                               class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Product Name">
+                <div class="grid grid-cols-12 gap-3">
+                    
+                    {{-- BOQ Material Link (REQUIRED REMOVED) --}}
+                    <div class="col-span-12 sm:col-span-4">
+                        {{-- REMOVED <span class="text-red-500">*</span> from label in dynamic script --}}
+                        <label for="boqMaterialId-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Internal Material Ref.</label>
+                        {{-- REMOVED required --}}
+                        <select id="boqMaterialId-${productRowCounter}" name="boqMaterialId" 
+                                 class="input-field w-full p-2 border rounded-md text-sm text-gray-900">
+                            ${optionsHtml}
+                        </select>
                     </div>
-                    <div class="col-span-6 sm:col-span-3">
+
+                    {{-- Supplier Item Name --}}
+                    <div class="col-span-12 sm:col-span-3">
+                        <label for="item-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Supplier Item Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="item-${productRowCounter}" name="item" required
+                                 class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Product Name">
+                    </div>
+
+                    {{-- Item Code (Description) --}}
+                    <div class="col-span-12 sm:col-span-2">
                         <label for="description-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Item Code</label>
                         <input type="text" id="description-${productRowCounter}" name="description"
-                               class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="Item Code">
+                                 class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="SKU/Code">
                     </div>
-                    <div class="col-span-4 sm:col-span-1">
-                        <label for="unit-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Unit <span class="text-red-500"></span></label>
-                        <input type="text" id="unit-${productRowCounter}" name="unit" 
-                               class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="pcs/kg/l">
-                    </div>
-                    <div class="col-span-4 sm:col-span-1">
+
+                    {{-- Unit Price --}}
+                    <div class="col-span-6 sm:col-span-2">
                         <label for="unitPrice-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Unit Price <span class="text-red-500">*</span></label>
                         <input type="number" id="unitPrice-${productRowCounter}" name="unitPrice" required step="0.01" min="0.01"
-                               class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="0.00">
+                                 class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="0.00">
                     </div>
                     
-                    <div class="col-span-2 sm:col-span-6 sm:text-right flex items-center justify-end sm:justify-end">
+                    {{-- Unit --}}
+                    <div class="col-span-4 sm:col-span-1">
+                        <label for="unit-${productRowCounter}" class="block text-xs font-medium text-gray-600 mb-1">Unit</label>
+                        <input type="text" id="unit-${productRowCounter}" name="unit" 
+                                 class="input-field w-full p-2 border rounded-md text-sm text-gray-900" placeholder="pcs/kg/l">
+                    </div>
+
+                    {{-- Remove Button Placeholder/Area --}}
+                    <div class="col-span-2 sm:col-span-12 sm:text-right flex items-center justify-end sm:justify-end mt-2">
                         <button type="button" onclick="removeProductRow(this)"
-                                class="text-red-500 hover:text-red-700 text-sm font-medium p-1 rounded-md transition-colors">
+                                 class="text-red-500 hover:text-red-700 text-sm font-medium p-1 rounded-md transition-colors">
                             Remove
                         </button>
                     </div>
@@ -344,39 +385,52 @@
         let hasError = false;
 
         productRows.forEach((row, index) => {
-    const itemInput = row.querySelector('[name="item"]');
-    const priceInput = row.querySelector('[name="unitPrice"]');
-    const descInput = row.querySelector('[name="description"]');
-    const unitInput = row.querySelector('[name="unit"]'); 
+            const boqIdInput = row.querySelector('[name="boqMaterialId"]'); // <-- NEW
+            const itemInput = row.querySelector('[name="item"]');
+            const priceInput = row.querySelector('[name="unitPrice"]');
+            const descInput = row.querySelector('[name="description"]');
+            const unitInput = row.querySelector('[name="unit"]'); 
 
-    const item = itemInput.value.trim();
-    const unitPrice = parseFloat(priceInput.value);
+            const item = itemInput.value.trim();
+            const unitPrice = parseFloat(priceInput.value);
 
-    // Reset error borders
-    itemInput.classList.remove('border-red-500');
-    priceInput.classList.remove('border-red-500');
+            // Reset error borders
+            boqIdInput.classList.remove('border-red-500'); // <-- NEW
+            itemInput.classList.remove('border-red-500');
+            priceInput.classList.remove('border-red-500');
 
-    // Validate product fields
-    if (!item) {
-        itemInput.classList.add('border-red-500');
-        hasError = true;
-    }
-    if (isNaN(unitPrice) || unitPrice <= 0) {
-        priceInput.classList.add('border-red-500');
-        hasError = true;
-    }
+            // 1. Validate BOQ Material ID (OPTIONAL NOW - REMOVED REQUIRED CHECK)
+            // if (!boqIdInput.value) {
+            //     boqIdInput.classList.add('border-red-500');
+            //     hasError = true;
+            // }
 
-    // Collect product data
-    products.push({
-        item: item,
-        description: descInput.value.trim(),
-        unit: unitInput ? unitInput.value.trim() : null, // <-- Include unit safely
-        unit_price: unitPrice.toFixed(2)
-    });
-});
+            // 2. Validate product fields
+            if (!item) {
+                itemInput.classList.add('border-red-500');
+                hasError = true;
+            }
+            if (isNaN(unitPrice) || unitPrice <= 0) {
+                priceInput.classList.add('border-red-500');
+                hasError = true;
+            }
+
+            // Collect product data (CRITICAL CHANGE)
+            // If boqIdInput.value is empty string, parseInt converts it to NaN, which is not JSON-safe.
+            // Using a ternary to ensure it's null or a number.
+            const boqMaterialId = boqIdInput.value ? parseInt(boqIdInput.value) : null;
+
+            products.push({
+                boq_material_id: boqMaterialId, // <-- NOW NULL IF NOT SELECTED
+                item: item,
+                description: descInput.value.trim(),
+                unit: unitInput ? unitInput.value.trim() : null,
+                unit_price: unitPrice.toFixed(2)
+            });
+        });
 
 
-        // Basic check for required supplier fields (if empty, prevent submission)
+        // Basic check for required supplier fields 
         const requiredSupplierFields = [
             'supplierName', 'location', 'address', 'contact'
         ];
@@ -406,13 +460,20 @@
         this.submit();
     });
 
-    // Initialize: Ensure the initial row's remove button is hidden
+    // Initialize: Store options and hide the initial remove button
     document.addEventListener('DOMContentLoaded', () => {
         const initialRow = productsContainer.querySelector('.product-row');
         if (initialRow) {
-            initialRow.querySelector('button').classList.add('hidden');
+            // Cache the options HTML
+            boqOptions = document.getElementById('boqMaterialId-0').innerHTML;
+            
+            // Hide the remove button on the mandatory first row
+            const removeBtn = initialRow.querySelector('button');
+            if (removeBtn) {
+                 removeBtn.classList.add('hidden');
+            }
         }
-        // If the server returned validation errors, show the message box
+        
         @if ($errors->any() || session('error'))
             showMessage("Please correct the errors indicated below.", 'error');
         @endif

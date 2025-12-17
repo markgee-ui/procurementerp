@@ -1,14 +1,29 @@
 @extends('layouts.app')
 
-@section('title', 'Create Purchase Order for ' . $supplier->name)
+{{-- Use the project name in the title if available --}}
+@section('title', 'Create Purchase Order for ' . $supplier->name . 
+    (isset($requisitionProjectName) ? ' (' . $requisitionProjectName . ')' : ''))
 
 @section('content')
+
+@php
+    // --- Assume these variables are passed from the controller (ProcurementController) ---
+    // $supplier (required)
+    // $products (required)
+    // $requisition (optional, full PurchaseRequisition model)
+    // $requisitionProjectName (optional, string)
+    
+    // Check if we are in the Requisition flow mode
+    $requisitionId = $requisition->id ?? null;
+    $isFromRequisition = isset($requisition) && isset($requisitionProjectName);
+    $inputClass = 'mt-1 block w-full border rounded-md sm:text-sm p-2';
+@endphp
 
 <div class="max-w-7xl mx-auto space-y-8">
     
     {{-- Back Button --}}
     <a href="{{ route('procurement.supplier.index') }}" 
-       class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600 transition">
+        class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600 transition">
         <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
         Back to Supplier List
     </a>
@@ -16,27 +31,61 @@
     <header class="pb-4 border-b border-gray-200">
         <h1 class="text-3xl font-bold text-gray-800">New Purchase Order</h1>
         <p class="text-xl text-indigo-600">Supplier: {{ $supplier->name }}</p>
+        
+        @if ($isFromRequisition)
+        <div class="mt-2 p-2 bg-yellow-100 text-yellow-700 border-l-4 border-yellow-500">
+            <p class="text-sm font-medium">Processing Requisition #{{ $requisitionId }}. Project: **{{ $requisitionProjectName }}**</p>
+        </div>
+        @endif
     </header>
 
-    {{-- Form for PO creation (using Alpine.js for dynamic rows is ideal, but here's the basic HTML structure) --}}
-   <form action="{{route('procurement.order.store') }}" method="POST" class="bg-white shadow-xl rounded-xl p-6">
+    {{-- Form for PO creation --}}
+    <form action="{{ route('procurement.order.store') }}" method="POST" class="bg-white shadow-xl rounded-xl p-6">
     @csrf
+    
     {{-- Hidden field to pass supplier ID --}}
     <input type="hidden" name="supplier_id" value="{{ $supplier->id }}">
+    
+    {{-- Hidden field to pass Requisition ID if applicable --}}
+    @if ($isFromRequisition)
+        <input type="hidden" name="requisition_id" value="{{ $requisitionId }}">
+    @endif
 
     <h2 class="text-2xl font-semibold text-gray-700 mb-6">Order Details</h2>
     <div class="mb-6">
         <label for="project_name" class="block text-sm font-medium text-gray-700">
-            Project Name (Optional)
+            Project Name 
+            @if (!$isFromRequisition)
+            <span class="text-red-500">*</span>
+            @else
+            (From Requisition)
+            @endif
         </label>
-        <input type="text" name="project_name" id="project_name"
-               class="mt-1 block w-1/2 border rounded-md sm:text-sm"
->
+        
+        @if ($isFromRequisition)
+            {{-- READ-ONLY FIELD FOR REQUISITION FLOW --}}
+            {{-- Display the value in a visible but read-only input --}}
+            <input type="text"
+                   value="{{ $requisitionProjectName }}"
+                   readonly
+                   class="{{ $inputClass }} bg-gray-100 cursor-not-allowed font-semibold">
+                   
+            {{-- Pass the required value in a hidden field for the controller --}}
+            <input type="hidden" name="project_name" value="{{ $requisitionProjectName }}">
+
+        @else
+            {{-- EDITABLE FIELD FOR MANUAL FLOW --}}
+            <input type="text" name="project_name" id="project_name"
+                   class="{{ $inputClass }}"
+                   value="{{ old('project_name') }}"
+            >
+        @endif
+
         @error('project_name')
             <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
         @enderror
     </div>
-    {{-- End New Input --}}
+    {{-- End Project Name Section --}}
 
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -63,7 +112,6 @@
 
                     {{-- Unit Price --}}
                     <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {{-- Assuming Unit Price is a known value (e.g., $100.00) --}}
                         <span data-price="{{ $product->unit_price }}">{{ number_format($product->unit_price, 2) }}</span>
                         <input type="hidden" name="items[{{ $product->id }}][unit_price]" value="{{ $product->unit_price }}">
                     </td>
@@ -80,7 +128,7 @@
                                 class="discount-input w-full p-2 border rounded-md text-sm text-center">
                     </td>
                     
-                    {{-- Calculated Total (Requires JavaScript for real-time calculation) --}}
+                    {{-- Calculated Total --}}
                     <td class="px-3 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                         <span class="line-total">0.00</span>
                     </td>
@@ -109,7 +157,7 @@
 </form>
 </div>
 
-{{-- JAVASCRIPT FOR REAL-TIME CALCULATION --}}
+{{-- JAVASCRIPT FOR REAL-TIME CALCULATION (UNCHANGED) --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const tableBody = document.querySelector('.min-w-full tbody');

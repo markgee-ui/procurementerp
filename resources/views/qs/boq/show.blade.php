@@ -78,12 +78,7 @@
                class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">
                 <i class="fas fa-file-pdf mr-1"></i> Download PDF
             </a>
-            
-            {{-- Print Button (Uses window.print()) --}}
-            <button onclick="window.print()"
-                    class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">
-                <i class="fas fa-print mr-1"></i> Print
-            </button>
+
             
             {{-- Edit and Back Buttons --}}
             <a href="{{ route('qs.boq.edit', $boq) }}" 
