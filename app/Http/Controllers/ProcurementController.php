@@ -866,7 +866,14 @@ public function destroyServiceOrder(ServiceOrder $serviceOrder)
         ->route('procurement.service-order.index')
         ->with('success', "Service Order {$orderNumber} has been deleted.");
 }
+public function downloadServiceOrder(ServiceOrder $serviceOrder)
+{
+    $pdf = Pdf::loadView('procurement.service_order.pdf', [
+        'serviceOrder' => $serviceOrder
+    ])->setPaper('A4', 'portrait');
 
+    return $pdf->download('SO-' . $serviceOrder->order_number . '.pdf');
+}
     // --- NEW: View Approved Requisition to Initiate PO ---
     /**
      * Show an approved Purchase Requisition and provide options to act upon it.

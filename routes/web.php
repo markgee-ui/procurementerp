@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/service-orders/{serviceOrder}/edit', [ProcurementController::class, 'editServiceOrder'])->name('service-order.edit');
     Route::put('/service-orders/{serviceOrder}', [ProcurementController::class, 'updateServiceOrder'])->name('service-order.update');
     Route::delete('/service-orders/{serviceOrder}', [ProcurementController::class, 'destroyServiceOrder'])->name('service-order.destroy');
+     Route::get('/service-orders/download/{serviceOrder}', [ProcurementController::class, 'downloadServiceOrder'])->name('service-order.download');
     
     // Your existing create/store routes
     Route::get('/suppliers/{supplier}/service-order/create', [ProcurementController::class, 'createServiceOrder'])->name('service-order.create');
