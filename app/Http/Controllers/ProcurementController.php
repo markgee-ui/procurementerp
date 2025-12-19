@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Supplier;
 use App\Models\Product;
 use App\Models\PurchaseOrder; 
+use App\Models\ServiceOrder; 
 use App\Models\PurchaseRequisition;
 use App\Models\BoqMaterial;
 use App\Models\PurchaseOrderItem; 
@@ -717,6 +718,38 @@ public function downloadPurchaseOrder(PurchaseOrder $purchaseOrder)
 
     return $pdf->download('PO-' . $safeOrderNumber . '.pdf');
 }
+public function createServiceOrder(Supplier $supplier)
+    {
+        return view('procurement.service_order.create', compact('supplier'));
+    }
+
+public function storeServiceOrder(Request $request)
+{
+    $request->validate([
+        'supplier_id'         => 'required|exists:suppliers,id',
+        'project_name'        => 'required|string|max:255',
+        'service_description' => 'required|string',
+        'amount'              => 'required|numeric|min:0',
+    ]);
+
+    // Generate Number: TSO-2025-001
+    $nextId = (ServiceOrder::max('id') ?? 0) + 1;
+    $soNumber = "TSO-" . date('Y') . "-" . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+
+    $serviceOrder = ServiceOrder::create([
+        'supplier_id'         => $request->supplier_id,
+        'order_number'        => $soNumber,
+        'project_name'        => $request->project_name,
+        'service_description' => $request->service_description,
+        'total_amount'        => $request->amount,
+        'order_date'          => now(),
+        'status'              => 'Draft',
+    ]);
+
+    return redirect()
+        ->route('procurement.supplier.index') // Or a specific SO index
+        ->with('success', "Service Order {$soNumber} saved successfully!");
+}
 public function requisitionsIndex(Request $request)
 {
     // Define the stages required for final procurement action (e.g., QS=1, OPM=2)
@@ -760,6 +793,78 @@ public function requisitionsIndex(Request $request)
     $requisitions = $query->paginate(15)->withQueryString();
 
     return view('procurement.requisition.index', compact('requisitions'));
+}
+public function indexServiceOrders(Request $request)
+{
+    $serviceOrders = ServiceOrder::with('supplier')
+        ->latest()
+        ->when($request->search, function($query, $search) {
+            $query->where('order_number', 'like', "%{$search}%")
+                  ->orWhere('project_name', 'like', "%{$search}%");
+        })
+        ->paginate(15);
+
+    return view('procurement.service_order.index', compact('serviceOrders'));
+}
+
+/**
+ * Display the specified service order.
+ */
+public function showServiceOrder(ServiceOrder $serviceOrder)
+{
+    // Load the supplier relationship if not already loaded
+    $serviceOrder->load('supplier');
+
+    return view('procurement.service_order.show', compact('serviceOrder'));
+}
+
+/**
+ * Show the form for editing the specified service order.
+ */
+public function editServiceOrder(ServiceOrder $serviceOrder)
+{
+    $suppliers = Supplier::orderBy('name')->get();
+    
+    return view('procurement.service_order.edit', compact('serviceOrder', 'suppliers'));
+}
+
+/**
+ * Update the specified service order in storage.
+ */
+public function updateServiceOrder(Request $request, ServiceOrder $serviceOrder)
+{
+    $request->validate([
+        'supplier_id'         => 'required|exists:suppliers,id',
+        'project_name'        => 'required|string|max:255',
+        'service_description' => 'required|string',
+        'amount'              => 'required|numeric|min:0',
+        'status'              => 'required|string', // e.g., Draft, Pending, Approved
+    ]);
+
+    $serviceOrder->update([
+        'supplier_id'         => $request->supplier_id,
+        'project_name'        => $request->project_name,
+        'service_description' => $request->service_description,
+        'total_amount'        => $request->amount,
+        'status'              => $request->status,
+    ]);
+
+    return redirect()
+        ->route('procurement.service-order.index')
+        ->with('success', "Service Order {$serviceOrder->order_number} updated successfully!");
+}
+
+/**
+ * Remove the specified service order from storage.
+ */
+public function destroyServiceOrder(ServiceOrder $serviceOrder)
+{
+    $orderNumber = $serviceOrder->order_number;
+    $serviceOrder->delete();
+
+    return redirect()
+        ->route('procurement.service-order.index')
+        ->with('success', "Service Order {$orderNumber} has been deleted.");
 }
 
     // --- NEW: View Approved Requisition to Initiate PO ---

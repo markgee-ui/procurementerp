@@ -57,6 +57,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/requisitions/{requisition}', [ProcurementController::class, 'requisitionAction'])->name('requisition.action');
     Route::post('/requisitions/{requisition}/initiate-po', [ProcurementController::class, 'initiatePurchaseOrder'])->name('requisition.initiate_po');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+     Route::get('/service-orders', [ProcurementController::class, 'indexServiceOrders'])->name('service-order.index');
+    Route::get('/service-orders/{serviceOrder}', [ProcurementController::class, 'showServiceOrder'])->name('service-order.show');
+    Route::get('/service-orders/{serviceOrder}/edit', [ProcurementController::class, 'editServiceOrder'])->name('service-order.edit');
+    Route::put('/service-orders/{serviceOrder}', [ProcurementController::class, 'updateServiceOrder'])->name('service-order.update');
+    Route::delete('/service-orders/{serviceOrder}', [ProcurementController::class, 'destroyServiceOrder'])->name('service-order.destroy');
+    
+    // Your existing create/store routes
+    Route::get('/suppliers/{supplier}/service-order/create', [ProcurementController::class, 'createServiceOrder'])->name('service-order.create');
+    Route::post('/service-order/store', [ProcurementController::class, 'storeServiceOrder'])->name('service-order.store');
     
     });
 
