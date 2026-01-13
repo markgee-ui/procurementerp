@@ -86,7 +86,7 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service Description</th>
-                        <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Unit Price</th>
+                        <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Service Price</th>
                         <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Discount (%)</th>
                         <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total (KES)</th>
                     </tr>

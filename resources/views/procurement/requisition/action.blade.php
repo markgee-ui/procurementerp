@@ -50,37 +50,33 @@
         </div>
 
         {{-- Action Card: Select Supplier (Col 3) --}}
-        <div class="col-span-1 bg-white shadow-lg rounded-lg p-6 h-fit">
-            <h3 class="text-xl font-bold mb-4 border-b pb-2 text-indigo-600">Initiate Purchase Order</h3>
-            
-            <form action="{{ route('procurement.requisition.initiate_po', $requisition) }}" method="POST">
-                @csrf
-                <div class="mb-4">
-                    <label for="preferred_supplier_id" class="block text-sm font-medium text-gray-700">Select Supplier</label>
-                    <select id="preferred_supplier_id" name="preferred_supplier_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        <option value="" data-available="true">-- Select a Supplier --</option>
-                        @foreach ($suppliers as $supplier)
-                            {{-- All options are initially visible in HTML, JS will hide unavailable ones --}}
-                            <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
-                        @endforeach
-                    </select>
-                    <p id="supplier-filter-info" class="text-xs text-red-500 mt-1 hidden">Please select item(s) to filter suppliers based on material availability.</p>
-                </div>
+        {{-- 1. Update the Form in the Action Card (Col 3) --}}
+<div class="col-span-1 bg-white shadow-lg rounded-lg p-6 h-fit">
+    <h3 class="text-xl font-bold mb-4 border-b pb-2 text-indigo-600">Initiate Purchase Order</h3>
+    
+    <form action="{{ route('procurement.requisition.initiate_po', $requisition) }}" method="POST" id="initiate-po-form">
+        @csrf
+        {{-- Hidden container for selected item IDs --}}
+        <div id="selected-items-inputs"></div>
 
-                <p class="text-xs text-gray-500 mb-4">Selecting a supplier will create a Purchase Order draft with the *selected* items.</p>
-                
-                <button type="submit" id="create-po-button" class="btn-primary w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md" disabled>
-                    Proceed to Create PO
-                </button>
-            </form>
-
-            <hr class="my-4">
-            
-            <button class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-600 w-full" disabled>
-                Mark as Processed (Manual PO Link)
-            </button>
-            <p class="text-xs text-gray-500 mt-2 text-center">For linking to external/manual Purchase Orders.</p>
+        <div class="mb-4">
+            <label for="preferred_supplier_id" class="block text-sm font-medium text-gray-700">Select Supplier</label>
+            <select id="preferred_supplier_id" name="preferred_supplier_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <option value="" data-available="true">-- Select a Supplier --</option>
+                @foreach ($suppliers as $supplier)
+                    <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                @endforeach
+            </select>
+            <p id="supplier-filter-info" class="text-xs text-red-500 mt-1 hidden">Please select item(s) to filter suppliers based on material availability.</p>
         </div>
+
+        <p class="text-xs text-gray-500 mb-4">Selecting a supplier will create a Purchase Order draft with only the <strong>selected</strong> items.</p>
+        
+        <button type="submit" id="create-po-button" class="btn-primary w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md" disabled>
+            Proceed to Create PO
+        </button>
+    </form>
+</div>
     </div>
 </div>
 
@@ -92,31 +88,40 @@ document.addEventListener('DOMContentLoaded', function () {
     const selectAllCheckbox = document.getElementById('select-all-items');
     const createPoButton = document.getElementById('create-po-button');
     const filterInfo = document.getElementById('supplier-filter-info');
+    const hiddenInputsContainer = document.getElementById('selected-items-inputs');
 
-    // Transfer the PHP map to JavaScript
-    // Key: PR Item ID, Value: Array of Supplier IDs that provide the material for this item
     const itemSupplierMap = @json($itemSupplierMap); 
     
-    // Original list of all supplier IDs for quick reference
     const allSupplierIds = Array.from(supplierSelect.options)
                                 .filter(o => o.value)
                                 .map(o => parseInt(o.value));
 
-    // Helper to get an array of selected PR Item IDs
     function getSelectedItemIds() {
         return Array.from(itemCheckboxes)
             .filter(cb => cb.checked)
             .map(cb => parseInt(cb.value));
     }
 
-    // Main filtering function
+    // NEW: Function to sync checkboxes to the form submission
+    function updateHiddenInputs() {
+        hiddenInputsContainer.innerHTML = ''; // Clear previous
+        getSelectedItemIds().forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'selected_item_ids[]';
+            input.value = id;
+            hiddenInputsContainer.appendChild(input);
+        });
+    }
+
     function filterSuppliers() {
         const selectedItemIds = getSelectedItemIds();
+        
+        // Sync selected items to the form
+        updateHiddenInputs();
 
-        // Control button state
         createPoButton.disabled = selectedItemIds.length === 0 || !supplierSelect.value;
 
-        // Show all suppliers if no items are selected
         if (selectedItemIds.length === 0) {
             Array.from(supplierSelect.options).forEach(option => {
                 option.style.display = '';
@@ -127,55 +132,38 @@ document.addEventListener('DOMContentLoaded', function () {
 
         filterInfo.classList.add('hidden');
         
-        // Start with all suppliers
         let commonSupplierIds = allSupplierIds;
 
-        // Intersect the supplier lists for all selected items
         selectedItemIds.forEach(itemId => {
             const currentItemSuppliers = itemSupplierMap[itemId] || [];
-            
-            // Intersection: Keep only suppliers present in both the common list and the current item's list
             commonSupplierIds = commonSupplierIds.filter(supplierId => 
                 currentItemSuppliers.includes(supplierId)
             );
         });
 
-        // Update the Supplier dropdown visibility
         Array.from(supplierSelect.options).forEach(option => {
             const supplierId = parseInt(option.value);
-
-            // Keep the default '-- Select a Supplier --' option visible
             if (!supplierId) {
                 option.style.display = '';
                 return;
             }
-
-            // Check if the current supplier ID is in the common list
-            if (commonSupplierIds.includes(supplierId)) {
-                option.style.display = ''; // Show
-            } else {
-                option.style.display = 'none'; // Hide
-            }
+            option.style.display = commonSupplierIds.includes(supplierId) ? '' : 'none';
         });
 
-        // Reset the selected supplier if the current selection is now hidden
         if (supplierSelect.selectedOptions[0]?.style.display === 'none') {
             supplierSelect.value = '';
             createPoButton.disabled = true;
         }
     }
     
-    // Listener to update button status when supplier is selected
     supplierSelect.addEventListener('change', function() {
         createPoButton.disabled = getSelectedItemIds().length === 0 || !supplierSelect.value;
     });
 
-    // Attach listener to individual item checkboxes
     itemCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', filterSuppliers);
     });
 
-    // Attach listener to select-all checkbox
     selectAllCheckbox.addEventListener('change', function() {
         itemCheckboxes.forEach(checkbox => {
             checkbox.checked = selectAllCheckbox.checked;
@@ -183,7 +171,6 @@ document.addEventListener('DOMContentLoaded', function () {
         filterSuppliers();
     });
 
-    // Run on load
     filterSuppliers(); 
 });
 </script>

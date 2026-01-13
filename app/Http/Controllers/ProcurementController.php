@@ -453,9 +453,21 @@ public function createPurchaseOrder(Supplier $supplier, Request $request) // ADD
         ]);
         
         // Optional: Update Requisition status to 'Processed' if linked
-        if ($requisition) {
-            $requisition->update(['status' => 'Processed']);
-        }
+       if ($requisition) {
+    // Count items in the current PO
+    $itemsInThisOrder = count($orderItems);
+    
+    // Count total items that were originally in the requisition
+    $totalRequisitionItems = $requisition->items()->count();
+
+    // Determine if this is a partial or full fulfillment
+    // If the items in this PO are fewer than the total items in the PR, mark as 'Partial'
+    if ($itemsInThisOrder < $totalRequisitionItems) {
+        $requisition->update(['status' => 'Partially Processed']);
+    } else {
+        $requisition->update(['status' => 'Processed']);
+    }
+}
 
         $purchaseOrder->items()->createMany($orderItems);
 
@@ -787,7 +799,7 @@ public function requisitionsIndex(Request $request)
         // Add sorting and filtering directly to the main query
         ->orderBy('created_at', 'desc');
 
-    // Optional: Implement filtering by project/site, date, etc. here using $request
+    // Optionalor future fetures: Implement filtering by project/site, date, etc. here using $request
     // E.g. ->when($request->project_id, fn($q, $id) => $q->where('project_id', $id))
 
     $requisitions = $query->paginate(15)->withQueryString();
