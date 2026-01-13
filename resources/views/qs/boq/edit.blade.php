@@ -91,7 +91,7 @@
         
         const activityOptions = [
             { value: 'Foundation', text: 'Foundation' },
-            { value: 'Masonry', text: 'Masonry' },
+            { value: 'Walling', text: 'Walling' },
             { value: 'Roofing', text: 'Roofing' },
             { value: 'Wall Finishes', text: 'Wall Finishes' },
             { value: 'Floor Finishes', text: 'Floor Finishes' },
@@ -107,6 +107,18 @@
             { value: 'Hvac Installations', text: 'HVAC Installations' },
             { value: 'Landscaping', text: 'Landscaping' },
             { value: 'Joinery Works', text: 'Joinery Works' },
+            { value: 'Preliminaries', text: 'Preliminaries' },
+            { value: 'Site Clearance & Top Soil Stripping', text: 'Site Clearance' },
+            { value: 'Earthworks', text: 'Earthworks' },
+            { value: 'Natural Material Base & Subbase', text: 'Natural Material Base and Subbase' },
+            { value: 'Surface Course', text: 'Surface Course' },
+            { value: 'Road Furniture', text: 'Road Furniture' },
+            { value: 'Street Lighting', text: 'Street Lighting' },
+            { value: 'Valves Hydrants & air valves', text: 'Valves Hydrants & air valves' },
+            { value: 'Fittings, bends and transition pieces', text: 'Fittings, bends and transition pieces' },
+            { value: 'Civil works and trenching', text: 'Civil works and trenching' },
+            { value: 'Spares, QA & Trenching', text: 'Spares, QA & Trenching' },
+            { value: 'Provisional', text: 'Provisional' },
             { value: 'Miscellaneous', text: 'Miscellaneous' },
         ];
         

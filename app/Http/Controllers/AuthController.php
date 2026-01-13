@@ -65,7 +65,7 @@ public function login(Request $request)
         } elseif ($user->role === 'pm') {
             $intendedRoute = route('pm.index'); 
             $message = 'Welcome back, Project Manager!';
-            } elseif ($user->role === 'offpm') {
+        } elseif ($user->role === 'offpm') {
             $intendedRoute = route('opm.index'); 
             $message = 'Welcome back, Project Manager!';
         } else {

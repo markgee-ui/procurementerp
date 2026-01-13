@@ -164,41 +164,54 @@
                             </td>
 
                             {{-- NEW: Actions Cell --}}
-                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-center">
-                                <div class="flex items-center justify-center space-x-2">
-                                    {{-- Edit Button --}}
-                                    {{-- Assuming 'procurement.supplier.edit' is the edit route --}}
-                                    <a href="{{ route('procurement.order.create', ['supplier' => $supplier->id]) }}" 
+                            {{-- NEW: Actions Cell --}}
+<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-center">
+    <div class="flex items-center justify-center space-x-2">
+        
+        {{-- 1. Create Purchase Order (Material) --}}
+        <a href="{{ route('procurement.order.create', ['supplier' => $supplier->id]) }}" 
            title="Create Purchase Order"
            class="text-green-600 hover:text-green-900 transition duration-150 ease-in-out p-1 rounded-md hover:bg-green-100">
-            {{-- Shopping Cart Icon --}}
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
         </a>
-                                    <a href="{{ route('procurement.supplier.edit', $supplier->id) }}" 
-                                        title="Edit Supplier"
-                                        class="text-indigo-600 hover:text-indigo-900 transition duration-150 ease-in-out p-1 rounded-md hover:bg-indigo-100">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-7l-2 2m5-5l2 2m-2-2l-3-3m3 3l-3 3"></path></svg>
-                                    </a>
-                                  <a href="{{ route('procurement.supplier.show', $supplier->id) }}" 
-    title="View Supplier Details"
-    class="text-teal-600 hover:text-teal-900 transition duration-150 ease-in-out p-1 rounded-md hover:bg-teal-100">
-    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-</a>
 
+        {{-- 2. NEW: Create Service Order (Labor/Works) --}}
+        <a href="{{ route('procurement.service-order.create', ['supplier' => $supplier->id]) }}" 
+           title="Create Service Order"
+           class="text-amber-600 hover:text-amber-900 transition duration-150 ease-in-out p-1 rounded-md hover:bg-amber-100">
+            {{-- Wrench/Tool Icon for Services --}}
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+        </a>
 
-                                    {{-- Delete Form/Button --}}
-                                    {{-- Assuming 'procurement.supplier.destroy' is the delete route --}}
-                                    <form action="{{ route('procurement.supplier.destroy', $supplier->id) }}" method="POST" 
-                                            onsubmit="return confirm('Are you sure you want to delete supplier \'{{ $supplier->name }}\'? This action cannot be undone.');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" title="Delete Supplier" 
-                                                class="text-red-600 hover:text-red-900 transition duration-150 ease-in-out p-1 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
+        {{-- 3. Edit --}}
+        <a href="{{ route('procurement.supplier.edit', $supplier->id) }}" 
+           title="Edit Supplier"
+           class="text-indigo-600 hover:text-indigo-900 transition duration-150 ease-in-out p-1 rounded-md hover:bg-indigo-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-7l-2 2m5-5l2 2m-2-2l-3-3m3 3l-3 3"></path></svg>
+        </a>
+
+        {{-- 4. View --}}
+        <a href="{{ route('procurement.supplier.show', $supplier->id) }}" 
+           title="View Supplier Details"
+           class="text-teal-600 hover:text-teal-900 transition duration-150 ease-in-out p-1 rounded-md hover:bg-teal-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+        </a>
+
+        {{-- 5. Delete --}}
+        <form action="{{ route('procurement.supplier.destroy', $supplier->id) }}" method="POST" 
+              onsubmit="return confirm('Are you sure you want to delete supplier \'{{ $supplier->name }}\'?');">
+            @csrf
+            @method('DELETE')
+            <button type="submit" title="Delete Supplier" 
+                    class="text-red-600 hover:text-red-900 transition duration-150 ease-in-out p-1 rounded-md hover:bg-red-100">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+        </form>
+    </div>
+</td>
                         </tr>
                     @endforeach
                 </tbody>
