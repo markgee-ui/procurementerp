@@ -5,7 +5,17 @@
 @section('content')
 
 <div class="max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Edit Purchase Order: {{ $purchaseOrder->order_number ?? 'TGL' . $purchaseOrder->id }}</h1>
+    {{-- Header with Back Button --}}
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Edit Purchase Order: {{ $purchaseOrder->order_number ?? 'TGL' . $purchaseOrder->id }}</h1>
+        
+        <a href="{{ route('procurement.order.index') }}" class="inline-flex items-center text-indigo-600 hover:text-indigo-900 font-medium">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to List
+        </a>
+    </div>
 
     {{-- The form action must use the PUT method for updating --}}
     <form action="{{ route('procurement.order.update', $purchaseOrder->id) }}" method="POST" class="bg-white shadow-xl rounded-xl p-6">
@@ -55,14 +65,11 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     
-                    {{-- Loop through EXISTING items to pre-populate --}}
                     @forelse ($purchaseOrder->items as $index => $item)
                         <tr class="item-row">
                             <td class="px-3 py-4">
-                                {{-- The index here is just for array keying in the POST request --}}
                                 <select name="items[{{ $index }}][product_id]" class="product-selector w-full p-2 border rounded-md text-sm" required>
                                     <option value="">Select a Product</option>
-                                    {{-- Loop through all products --}}
                                     @foreach ($products as $product)
                                         <option value="{{ $product->id }}" 
                                                 data-price="{{ $product->unit_price }}" 
@@ -71,7 +78,6 @@
                                         </option>
                                     @endforeach
                                 </select>
-                                {{-- Use the SAVED unit price for submission (client price can be volatile) --}}
                                 <input type="hidden" name="items[{{ $index }}][unit_price]" class="unit-price-hidden" value="{{ old("items.$index.unit_price", $item->unit_price) }}">
                             </td>
                             <td class="px-3 py-4 text-sm text-gray-700">
@@ -95,7 +101,6 @@
                             </td>
                         </tr>
                     @empty
-                        {{-- If the PO was saved with no items (unlikely but safe), show placeholder --}}
                         <tr id="empty-row-placeholder">
                             <td colspan="6" class="p-4 text-center text-gray-500">
                                 No items found. Click "Add Item" to add products.
@@ -120,9 +125,12 @@
             </div>
         </div>
         
-        <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end">
+        <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-3">
+            {{-- Cancel button also acting as a back button --}}
+            <a href="{{ route('procurement.order.index') }}" class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-150">Cancel</a>
+            
             <button type="submit" 
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 Update Purchase Order
             </button>
         </div>

@@ -111,6 +111,7 @@
                     <td>{{ $item->product->item }}</td>
                     <td>{{ $item->product->unit ?? 'N/A' }}</td>
                     <td text-align="right">{{ $item->quantity }}</td>
+                    
                     <td text-align="right">{{ number_format($item->unit_price, 2) }}</td>
                     <td text-align="right">{{ number_format($item->discount, 1) }}%</td>
                     <td text-align="right"><strong>{{ number_format($item->line_total, 2) }}</strong></td>

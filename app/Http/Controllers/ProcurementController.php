@@ -71,17 +71,66 @@ class ProcurementController extends Controller
      * @return \Illuminate\Http\RedirectResponse
      */                                        
     public function updateSupplier(Request $request, Supplier $supplier): RedirectResponse
-    {
-        // Placeholder validation - update with all your fields
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
-            // Add validation for KRA Pin, contacts, and payment details
-        ]);
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'location' => 'required|string|max:255',
+        'contact' => 'required|string|max:255',
+        'kra_pin' => 'nullable|string|max:255',
+        // Validate products array
+        'products' => 'nullable|array',
+        'products.*.item' => 'required|string|max:255',
+        'products.*.unit_price' => 'required|numeric|min:0',
+        'products.*.unit' => 'required|string|max:50',
+    ]);
 
+    try {
+        DB::beginTransaction();
+
+        // 1. Update Supplier Basic Info
+        $supplier->update($request->only([
+            'name', 'location', 'contact', 'kra_pin', 'email', 
+            'bank_name', 'account_number', 'paybill_number', 'till_number', 'sales_person_contact'
+        ]));
+
+        // 2. Manage Products
+        if ($request->has('products')) {
+            $submittedProductIds = collect($request->products)->pluck('id')->filter()->toArray();
+
+            // Optional: Delete products that were removed from the UI
+            // $supplier->products()->whereNotIn('id', $submittedProductIds)->delete();
+
+            foreach ($request->products as $productData) {
+                if (isset($productData['id']) && !empty($productData['id'])) {
+                    // Update existing product
+                    Product::where('id', $productData['id'])->update([
+                        'item' => $productData['item'],
+                        'unit_price' => $productData['unit_price'],
+                        'unit' => $productData['unit'],
+                        'description' => $productData['description'] ?? null,
+                    ]);
+                } else {
+                    // Create new product
+                    $supplier->products()->create([
+                        'item' => $productData['item'],
+                        'unit_price' => $productData['unit_price'],
+                        'unit' => $productData['unit'],
+                        'description' => $productData['description'] ?? null,
+                    ]);
+                }
+            }
+        }
+
+        DB::commit();
         return redirect()->route('procurement.supplier.index')
-                         ->with('success', 'Supplier details updated successfully!');
+                         ->with('success', 'Supplier and products updated successfully!');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error("SUPPLIER UPDATE ERROR: " . $e->getMessage());
+        return back()->with('error', 'Error updating supplier: ' . $e->getMessage());
     }
+}
 
     /**
      * Remove the specified supplier from storage.

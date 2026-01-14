@@ -3,8 +3,19 @@
 @section('title', 'Edit Service Order #' . ($serviceOrder->order_number))
 
 @section('content')
-<div class="max-w-4xl mx-auto">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Edit Service Order: {{ $serviceOrder->order_number }}</h1>
+{{-- Increased width to max-w-7xl --}}
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Edit Service Order: {{ $serviceOrder->order_number }}</h1>
+        
+        {{-- Added Back Button --}}
+        <a href="{{ route('procurement.service-order.index') }}" class="inline-flex items-center text-indigo-600 hover:text-indigo-900 font-medium">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to List
+        </a>
+    </div>
 
     <form action="{{ route('procurement.service-order.update', $serviceOrder->id) }}" method="POST" class="bg-white shadow-xl rounded-xl p-8">
         @csrf
@@ -46,9 +57,6 @@
                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm calculation-trigger">
                 </div>
 
-                {{-- Discount --}}
-
-
                 {{-- Final Total Display --}}
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Final Total</label>
@@ -61,8 +69,8 @@
         </div>
         
         <div class="mt-10 flex justify-end space-x-3">
-            <a href="{{ route('procurement.service-order.index') }}" class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Cancel</a>
-            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 shadow-md font-semibold">
+            <a href="{{ route('procurement.service-order.index') }}" class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-150">Cancel</a>
+            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 shadow-md font-semibold transition duration-150">
                 Save Changes
             </button>
         </div>

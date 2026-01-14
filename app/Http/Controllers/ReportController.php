@@ -47,7 +47,7 @@ class ReportController extends Controller
             $query = PurchaseRequisition::with(['items.boqMaterial', 'items.boqActivity', 'project']);
         } else {
             // Purchase Order Headers
-            fputcsv($file, ['Serial No', 'P.O Date', 'P.O No', 'Supplier Name', 'Item Description', 'Unit', 'Unit Price', 'Qty', 'Total Amt', 'Project Name']);
+            fputcsv($file, ['Serial No', 'P.O Date', 'P.O No', 'Supplier Name', 'Item Description','Item Code', 'Unit', 'Unit Price', 'Qty', 'Total Amt', 'Project Name']);
             $query = PurchaseOrder::with(['supplier', 'items.product']);
         }
 
@@ -112,7 +112,7 @@ class ReportController extends Controller
                             $item->product->item ?? 'N/A',
                             $item->product->description ?? 'N/A',
                             $item->product->unit ?? 'N/A',
-                            number_format($item->unit_price, 2),
+                            number_format($item->product->unit_price, 2),
                             $item->quantity,
                             number_format($item->line_total, 2),
                             $record->project_name
