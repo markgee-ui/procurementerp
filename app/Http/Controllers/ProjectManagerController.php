@@ -43,7 +43,7 @@ class ProjectManagerController extends Controller
      */
    public function indexRequisitions(Request $request)
 {
-    $query = PurchaseRequisition::with('initiator', 'project', 'material');
+    $query = PurchaseRequisition::with('initiator', 'project', 'material')->where('user_id', Auth::id());;
 
     // Search by material name
     if ($request->filled('item_search')) {
